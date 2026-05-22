@@ -1,0 +1,37 @@
+# Secrets
+.env
+backend/.env
+*.env
+!.env.example
+!backend/.env.example
+
+# Generated images (bind-mounted storage)
+backend/storage/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+venv/
+.venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.eslintcache
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker volumes
+postgres_data/
