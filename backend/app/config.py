@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     s3_public_url_base: str = ""  # e.g. https://bucket.s3.eu-central-1.amazonaws.com (or CloudFront later)
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000", "https://menu-mind-tawny.vercel.app"]
 
     # External call timeouts
     gemini_timeout_seconds: float = 60.0
