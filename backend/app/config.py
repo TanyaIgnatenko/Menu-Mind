@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     image_storage_dir: Path = Path("./storage/images")
     image_url_prefix: str = "/images"  # Public path served by FastAPI StaticFiles
 
+    # S3 storage (if s3_bucket is set, use S3; otherwise local filesystem)
+    s3_bucket: str = ""
+    s3_region: str = "eu-central-1"
+    s3_public_url_base: str = ""  # e.g. https://bucket.s3.eu-central-1.amazonaws.com (or CloudFront later)
+
     # CORS
     cors_origins: list[str] = ["http://localhost:3000"]
 

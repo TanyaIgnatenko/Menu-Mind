@@ -18,7 +18,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: setup logging and storage on startup."""
     settings = get_settings()
     configure_logging(debug=settings.debug)
-    ensure_storage_dir()
+    if not settings.s3_bucket:
+        ensure_storage_dir()
     logger = get_logger(__name__)
     logger.info(
         "application_started",
@@ -49,14 +50,17 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
 
-    # Mount static files for generated images
-    # Ensure dir exists before mounting (StaticFiles requires the path to exist)
-    ensure_storage_dir()
-    app.mount(
-        settings.image_url_prefix,
-        StaticFiles(directory=settings.image_storage_dir),
-        name="images",
-    )
+    # Mount static files for locally-stored images ONLY when not using S3.
+    # In production images are served directly from S3 (settings.s3_bucket is
+    # set), so there is no local directory to mount — attempting to mount a
+    # nonexistent directory would crash StaticFiles at startup.
+    if not settings.s3_bucket:
+        ensure_storage_dir()
+        app.mount(
+            settings.image_url_prefix,
+            StaticFiles(directory=settings.image_storage_dir),
+            name="images",
+        )
 
     app.include_router(health.router, prefix=settings.api_v1_prefix)
     app.include_router(menus.router, prefix=settings.api_v1_prefix)
