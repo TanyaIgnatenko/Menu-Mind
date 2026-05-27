@@ -131,7 +131,14 @@ async def _generate_one_dish(client: FalClient, dish: Dish) -> tuple[str, str, s
 
     Returns (status, url, error). Always returns a 3-tuple, even on failure.
     """
-    cache_key = cache_key_for_dish(dish.name_english, dish.category_english)
+    # Fall back to original name/category when English is empty (e.g. for
+    # loanword dish names like "Spaghetti alla Carbonara" where Gemini may
+    # leave name_english empty). Without this fallback, all dishes with empty
+    # name_english would collide on the same cache key and share one image.
+    cache_key = cache_key_for_dish(
+        dish.name_english or dish.name_original,
+        dish.category_english or dish.category,
+    )
 
     cached = lookup_cached_url(cache_key)
     if cached:

@@ -14,12 +14,12 @@ EXTRACTION_PROMPT = """You are extracting structured data from a restaurant menu
 
 Extract every dish/drink visible on the menu. For each item, provide these fields:
 - name_original: dish name exactly as written on the menu (in source language)
-- name_english: English translation of the name
+- name_english: English version of the name. Set this to "" ONLY if name_original is genuinely in English (composed of English words or an English-language menu entry) OR if it already includes an explicit English translation separated by a slash/dash (e.g. "Crema di Pomodoro / Tomato Cream"). LOANWORDS DO NOT COUNT AS ALREADY-ENGLISH: dishes like "Spaghetti alla Carbonara", "Lasagna", "Gnocchi", "Sushi", "Tiramisu", "Pierogi" are Italian/Japanese/Polish names borrowed into English — for these you MUST still provide name_english, either as a clean English translation ("Pasta with Pancetta and Egg") or, when the name has no real English equivalent, simply repeat or transliterate the dish name in name_english so the field is populated. The original may contain the SAME item in several non-English languages (e.g. German + Russian) — in that case give ONE single English translation, do NOT translate each language separately.
 - description_original: description text from the menu, or empty string if none
-- description_english: English translation of the description, or empty if no description
+- description_english: English translation of the description. PROVIDE THIS ONLY IF the original description does not already contain English. If description_original is already English or already includes an English version, set this to "". If the original repeats the same description in multiple non-English languages (e.g. German and Russian), produce ONE single English translation — never concatenate or duplicate translations per language. Empty string if there is no description.
 - size: serving size if explicitly specified (e.g. "20cl", "2cl"), otherwise empty
 - category: section header from the menu (e.g. "Suppen", "Pasta"). Preserve slash-separated bilingual headers like "Zuppe / Suppen".
-- category_english: clean English translation of the category (e.g. "Soups", "Pasta")
+- category_english: clean English translation of the category. PROVIDE THIS ONLY IF the category does not already contain English. If the category is already English or includes an English version (e.g. "Zuppe / Soups"), set this to "". For multilingual non-English categories (e.g. "Vorspeisen & Salate // Закуски & салаты"), give ONE single English translation (e.g. "Appetizers & Salads").
 - visual_appearance: a SHORT description of how this dish physically LOOKS, written for someone who will draw or photograph it. Describe SHAPE, COLORS, and PLATING STYLE — not the ingredient list. For LAYERED dishes (terrines, layered salads, tiramisu, lasagna, cakes), explicitly mention "side view" or "cross-section showing layers" so the layers are visible. For most other dishes no angle is needed. For well-known dishes, describe their canonical look. Examples:
     - "Сельдь под шубой" -> "layered salad shaped like a cake, cross-section side view showing distinct colorful layers, bright pink-purple beetroot on top, white mayonnaise and fish layers below"
     - "Tiramisu" -> "side view showing layered dessert, alternating cream and coffee-soaked sponge layers, dusted with cocoa on top"
@@ -63,8 +63,8 @@ Critical rules:
 - Do not include menu numbering codes (e.g. "675.") as part of the dish name
 - Interpret superscript or raised cents as decimal - never output prices like "1400" as whole numbers
 - If you cannot read part of the menu clearly, still include what you can see
+- ENGLISH FIELDS (name_english, description_english, category_english): only fill these when the original lacks English. Whenever the original text already contains English, the corresponding English field MUST be "". When the original has multiple non-English languages, output a SINGLE English translation - do not duplicate it once per language.
 """
-
 
 async def extract_menu_from_image(
     image_bytes: bytes,
