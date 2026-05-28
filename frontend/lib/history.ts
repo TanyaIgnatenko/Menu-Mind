@@ -9,6 +9,7 @@ export interface HistoryEntry {
   dishCount: number;
   cuisineType: string;
   savedAt: number;
+  customName?: string;
 }
 
 export function getHistory(): HistoryEntry[] {
@@ -50,6 +51,15 @@ export function addToHistory(menu: Menu): HistoryEntry[] {
 
 export function removeFromHistory(id: string): HistoryEntry[] {
   const updated = getHistory().filter((e) => e.id !== id);
+  writeHistory(updated);
+  return updated;
+}
+
+export function renameHistoryEntry(id: string, name: string): HistoryEntry[] {
+  const trimmed = name.trim();
+  const updated = getHistory().map((e) =>
+    e.id === id ? { ...e, customName: trimmed || undefined } : e,
+  );
   writeHistory(updated);
   return updated;
 }

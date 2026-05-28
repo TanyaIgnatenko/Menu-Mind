@@ -12,6 +12,7 @@ import {
   addToHistory,
   getHistory,
   removeFromHistory,
+  renameHistoryEntry,
   type HistoryEntry,
 } from "@/lib/history";
 
@@ -115,6 +116,7 @@ export default function Home() {
             openingId={openingId}
             onOpen={handleOpenFromHistory}
             onRemove={(id) => setHistory(removeFromHistory(id))}
+            onRename={(id, name) => setHistory(renameHistoryEntry(id, name))}
           />
         </>
       ) : (
