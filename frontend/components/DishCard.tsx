@@ -93,6 +93,9 @@ export function DishCard({ dish }: Props) {
             )}
           </div>
         </div>
+        {dish.iconic_note && (
+          <p className="mt-2 text-sm font-medium text-primary">★ {dish.iconic_note}</p>
+        )}
       </CardContent>
     </Card>
   );

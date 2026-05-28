@@ -29,6 +29,7 @@ class MenuRecord(Base):
     image_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     source_language: Mapped[str] = mapped_column(String(10))
     restaurant_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cuisine_type: Mapped[str] = mapped_column(String(100), nullable=False, server_default="")
     dishes_json: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -22,6 +22,9 @@ export function MenuDisplay({ menu }: Props) {
       {menu.restaurant_name && (
         <h2 className="text-2xl font-bold">{menu.restaurant_name}</h2>
       )}
+      {menu.cuisine_type && (
+        <p className="text-sm text-muted-foreground">🍽 {menu.cuisine_type} cuisine</p>
+      )}
 
       <p className="text-sm text-muted-foreground">
         Source language: {menu.source_language} · {menu.dishes.length} dishes

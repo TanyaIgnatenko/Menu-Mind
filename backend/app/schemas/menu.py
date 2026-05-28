@@ -13,6 +13,7 @@ class MenuCreate(BaseModel):
     source_language: str = Field(..., description="ISO language code: de, en, it, etc.")
     dishes: list[Dish]
     restaurant_name: str | None = None
+    cuisine_type: str = ""
 
 
 class Menu(BaseModel):
@@ -21,6 +22,7 @@ class Menu(BaseModel):
     id: UUID
     source_language: str = Field(..., description="ISO language code: de, en, it, etc.")
     restaurant_name: str | None = None
+    cuisine_type: str = ""
     dishes: list[Dish]
     created_at: datetime
 

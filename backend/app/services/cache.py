@@ -17,6 +17,7 @@ def _record_to_menu(record: MenuRecord) -> Menu:
         id=record.id,
         source_language=record.source_language,
         restaurant_name=record.restaurant_name,
+        cuisine_type=record.cuisine_type,
         dishes=dishes,
         created_at=record.created_at,
     )
@@ -37,6 +38,7 @@ async def save_menu(db: AsyncSession, image_hash: str, menu: MenuCreate) -> Menu
         image_hash=image_hash,
         source_language=menu.source_language,
         restaurant_name=menu.restaurant_name,
+        cuisine_type=menu.cuisine_type,
         dishes_json=[d.model_dump() for d in menu.dishes],
     )
     db.add(record)

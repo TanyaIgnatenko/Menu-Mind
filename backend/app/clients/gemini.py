@@ -70,6 +70,47 @@ class GeminiClient:
             "input_tokens": response.usage_metadata.prompt_token_count,
             "output_tokens": response.usage_metadata.candidates_token_count,
         }
+    
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(RateLimitError),
+        reraise=True,
+    )
+    async def generate_text(
+        self,
+        prompt: str,
+        model: str = "gemini-2.5-flash",
+    ) -> dict[str, Any]:
+        """Call Gemini with a text-only prompt (no image).
+
+        Used for enrichment (cuisine type, iconic dishes) where the dish list
+        is already extracted and only world knowledge is needed.
+        """
+        try:
+            response = await asyncio.wait_for(
+                self._client.aio.models.generate_content(
+                    model=model,
+                    contents=[prompt],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                    ),
+                ),
+                timeout=self._timeout,
+            )
+        except TimeoutError as e:
+            raise ExtractionError(f"Gemini text call exceeded {self._timeout}s timeout") from e
+        except Exception as e:
+            msg = str(e).lower()
+            if any(token in msg for token in ("rate", "quota", "429", "503", "unavailable", "overloaded")):
+                raise RateLimitError(str(e)) from e
+            raise ExtractionError(f"Gemini text call failed: {e}") from e
+
+        return {
+            "text": response.text,
+            "input_tokens": response.usage_metadata.prompt_token_count,
+            "output_tokens": response.usage_metadata.candidates_token_count,
+        }
 
     async def _generate(self, prompt: str, image_bytes: bytes, model: str) -> Any:
         # The google-genai stubs expect a list[str | Image | File | Part] union, not a
