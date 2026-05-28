@@ -7,6 +7,13 @@ import { MenuUpload } from "@/components/MenuUpload";
 import { Button } from "@/components/ui/button";
 import { getMenu } from "@/lib/api";
 import type { Menu } from "@/lib/types";
+import { RecentMenus } from "@/components/RecentMenus";
+import {
+  addToHistory,
+  getHistory,
+  removeFromHistory,
+  type HistoryEntry,
+} from "@/lib/history";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_DURATION_MS = 300000; // 5 minutes
@@ -65,6 +72,32 @@ export default function Home() {
     };
   }, [menu]);
 
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+
+  // Load history from localStorage on mount (browser only).
+  useEffect(() => {
+    setHistory(getHistory());
+  }, []);
+
+  function handleMenuLoaded(loaded: Menu) {
+    setMenu(loaded);
+    setHistory(addToHistory(loaded));
+  }
+
+  async function handleOpenFromHistory(id: string) {
+    setOpeningId(id);
+    try {
+      const loaded = await getMenu(id);
+      handleMenuLoaded(loaded);
+    } catch {
+      // Couldn't load (e.g. network issue). Leave the entry; user can retry
+      // or remove it manually.
+    } finally {
+      setOpeningId(null);
+    }
+  }
+
   return (
     <main className="container mx-auto max-w-2xl p-4 py-8">
       <header className="mb-8">
@@ -74,8 +107,16 @@ export default function Home() {
         </p>
       </header>
 
-      {!menu ? (
-        <MenuUpload onUploaded={setMenu} />
+    {!menu ? (
+        <>
+          <MenuUpload onUploaded={handleMenuLoaded} />
+          <RecentMenus
+            entries={history}
+            openingId={openingId}
+            onOpen={handleOpenFromHistory}
+            onRemove={(id) => setHistory(removeFromHistory(id))}
+          />
+        </>
       ) : (
         <div className="space-y-4">
           <Button variant="outline" onClick={() => setMenu(null)}>
