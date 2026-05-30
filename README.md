@@ -6,6 +6,22 @@
 
 Traveling abroad, you open a menu and recognize nothing. MenuMind lets you photograph any restaurant menu and instantly see every dish — translated into English and rendered as a photorealistic AI image — so you actually know what you're about to order.
 
+**Upload screen**
+
+![Upload screen](docs/screenshots/upload.png)
+
+The starting screen where users upload a photo of any menu.
+
+**Menu screen**
+
+The screen with a visualised menu.
+
+![Menu screen 1 ](docs/screenshots/menu1.png)
+
+![Menu screen 2](docs/screenshots/menu2.png)
+
+![Menu screen 3](docs/screenshots/menu3.png)
+
 ## Tech stack
 
 **Backend**
