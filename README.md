@@ -1,6 +1,6 @@
 # MenuMind
 
-> AI-powered menu visualization & translation — photograph any restaurant menu and instantly see a photorealistic image of every dish plus a bilingual translation.
+> AI-powered menu visualization & translation — photograph any restaurant menu and instantly see a photorealistic image of every dish plus an English translation.
 
 **Live demo:** https://menu-mind-tawny.vercel.app
 
