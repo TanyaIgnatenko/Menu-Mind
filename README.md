@@ -16,11 +16,11 @@ The starting screen where users upload a photo of any menu.
 
 The screen with a visualised menu.
 
-![Menu screen 1 ](docs/screenshots/menu1.png)
+![Menu screen](docs/screenshots/menu1.png)
 
-![Menu screen 2](docs/screenshots/menu2.png)
+![Menu screen](docs/screenshots/menu2.png)
 
-![Menu screen 3](docs/screenshots/menu3.png)
+![Menu screen](docs/screenshots/menu3.png)
 
 ## Tech stack
 
