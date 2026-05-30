@@ -93,12 +93,7 @@ export function DishCard({ dish }: Props) {
           {dish.size && (
             <p className="mt-2 text-xs text-muted-foreground">Size: {dish.size}</p>
           )}
-
-          {dish.iconic_note && (
-            <p className="mt-auto pt-3 text-sm font-medium text-primary">
-              ★ {dish.iconic_note}
-            </p>
-          )}
+          
         </div>
       </div>
     </Card>

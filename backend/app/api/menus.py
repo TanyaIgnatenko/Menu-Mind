@@ -12,7 +12,6 @@ from app.services.cache import get_cached_menu, get_menu_by_id, save_menu
 from app.services.extraction import extract_menu_from_image
 from app.services.image_generation import generate_images_for_menu
 from app.services.preprocessing import compute_image_hash, preprocess_image
-from app.services.enrichment import enrich_menu
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -65,18 +64,6 @@ async def create_menu(
 
     processed_bytes = preprocess_image(image_bytes)
     menu_create = await extract_menu_from_image(processed_bytes)
-
-    # Best-effort enrichment: cuisine type + iconic-dish notes. A separate
-    # Gemini call so extraction stays a focused transcription task. If it fails,
-    # the menu is still saved and fully usable without enrichment.
-    try:
-        enrichment = await enrich_menu(menu_create)
-        menu_create.cuisine_type = enrichment.cuisine_type
-        for item in enrichment.iconic:
-            if 0 <= item.index < len(menu_create.dishes):
-                menu_create.dishes[item.index].iconic_note = item.note
-    except Exception as e:
-        logger.warning("enrichment_failed", error=str(e), error_type=type(e).__name__)
 
     menu = await save_menu(db, image_hash, menu_create)
 

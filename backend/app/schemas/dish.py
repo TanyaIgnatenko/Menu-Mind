@@ -23,11 +23,6 @@ class Dish(BaseModel):
         description="Short description of how the dish physically looks "
         "(shape, colors, plating) — used to guide image generation",
     )
-    iconic_note: str = Field(
-        "",
-        description="Short appealing note if this is an iconic/signature dish "
-        "(e.g. 'The most iconic pasta here'); empty otherwise",
-    )
 
     # Image generation fields (Phase 4)
     image_status: ImageStatus = Field("pending", description="Image generation status")
@@ -45,7 +40,6 @@ class Dish(BaseModel):
                 "category": "Hauptgerichte",
                 "category_english": "Main Courses",
                 "visual_appearance": "golden breaded cutlet on a plate with fried potatoes",
-                "iconic_note": "",
                 "price": "14,90 EUR",
                 "image_status": "ready",
                 "image_url": "/images/abc/0.jpg",

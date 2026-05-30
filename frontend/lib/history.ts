@@ -7,7 +7,6 @@ export interface HistoryEntry {
   id: string;
   restaurantName: string | null;
   dishCount: number;
-  cuisineType: string;
   savedAt: number;
   customName?: string;
 }
@@ -38,7 +37,6 @@ export function addToHistory(menu: Menu): HistoryEntry[] {
     id: menu.id,
     restaurantName: menu.restaurant_name,
     dishCount: menu.dishes.length,
-    cuisineType: menu.cuisine_type ?? "",
     savedAt: Date.now(),
   };
   // Dedup by id (re-uploading the same image returns the same menu id),

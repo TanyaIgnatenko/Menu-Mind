@@ -25,12 +25,7 @@ function formatRelativeTime(ts: number): string {
 }
 
 function titleFor(entry: HistoryEntry): string {
-  // Priority: user-set name -> restaurant name -> cuisine fallback -> "Menu"
-  return (
-    entry.customName ||
-    entry.restaurantName ||
-    (entry.cuisineType ? `${entry.cuisineType} menu` : "Menu")
-  );
+  return entry.customName || entry.restaurantName || "Menu";
 }
 
 export function RecentMenus({
@@ -67,7 +62,6 @@ export function RecentMenus({
       <div className="space-y-2">
         {entries.map((entry) => {
           const meta = [
-            entry.cuisineType,
             `${entry.dishCount} dishes`,
             formatRelativeTime(entry.savedAt),
           ]

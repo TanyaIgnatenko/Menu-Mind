@@ -9,7 +9,6 @@ export interface Dish {
   category: string;
   category_english: string;
   visual_appearance: string;
-  iconic_note: string;
   price: string;
   image_status: ImageStatus;
   image_url: string;
@@ -20,7 +19,6 @@ export interface Menu {
   id: string;
   source_language: string;
   restaurant_name: string | null;
-  cuisine_type: string;
   dishes: Dish[];
   created_at: string;
 }
