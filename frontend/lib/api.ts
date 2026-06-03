@@ -14,6 +14,13 @@ export function imageUrl(relativePath: string): string {
   return `${BACKEND_ROOT}${relativePath}`;
 }
 
+export class NotFoundError extends Error {
+  constructor(message = "Not found") {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let errorMessage = `Request failed: ${response.status}`;
@@ -22,6 +29,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
       errorMessage = error.message || errorMessage;
     } catch {
       // Body wasn't JSON; keep generic message.
+    }
+    if (response.status === 404) {
+      throw new NotFoundError(errorMessage);
     }
     throw new Error(errorMessage);
   }
