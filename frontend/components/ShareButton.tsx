@@ -15,37 +15,10 @@ export function ShareButton({ menuId }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Build the shareable URL from the current origin so it works on both
-  // localhost and prod (Vercel) without any config.
   const shareUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/menu/${menuId}`
       : "";
-
-  async function handleClick() {
-    // Try native share first (mobile devices, some desktop browsers).
-    // Falls back to opening the modal with QR + copy link.
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({
-          title: "MenuMind",
-          text: "Check out this menu on MenuMind",
-          url: shareUrl,
-        });
-        return;
-      } catch (e) {
-        // User cancelled or share failed — fall through to modal.
-        // AbortError is normal (user cancelled), don't log noisily.
-        if ((e as Error).name !== "AbortError") {
-          console.warn("navigator.share failed:", e);
-        }
-        // If the user cancelled deliberately, don't open the modal —
-        // they made a choice. Only open if share was unsupported/failed.
-        if ((e as Error).name === "AbortError") return;
-      }
-    }
-    setOpen(true);
-  }
 
   async function handleCopy() {
     try {
@@ -59,7 +32,7 @@ export function ShareButton({ menuId }: Props) {
 
   return (
     <>
-      <Button variant="outline" onClick={handleClick}>
+      <Button variant="outline" onClick={() => setOpen(true)}>
         <Share2 className="mr-2 h-4 w-4" />
         Share
       </Button>
