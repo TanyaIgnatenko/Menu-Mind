@@ -32,6 +32,18 @@ Extract every dish/drink visible on the menu. For each item, provide these field
     - Standard formats: "14,90" (European), "14.90" (US) - keep as is
   Output prices in format like "14.00 EUR" or "14,90 EUR" matching menu's locale convention.
   If currency symbol/word is not visible, append " EUR" assuming euros.
+- dietary_tags: array of dietary/preference tags. Use ONLY these values:
+vegan, vegetarian, contains_pork, contains_beef, contains_chicken, contains_turkey, contains_fish, contains_shellfish, contains_eggs, contains_dairy, contains_nuts, contains_gluten, contains_alcohol, spicy, sweet, low_calorie
+  Tagging rules:
+    - Base tags on general culinary knowledge of the dish AS TYPICALLY PREPARED, not only on the menu text. Example: "Spaghetti alla Carbonara" -> ["contains_pork", "contains_dairy", "contains_eggs", "contains_gluten"] even if ingredients are not listed.
+    - "vegan" / "vegetarian": add ONLY when confident the dish qualifies. A vegan dish gets BOTH tags (vegan implies vegetarian).
+    - "contains_*": add whenever the ingredient is typically or plausibly present, even if not written on the menu (e.g. butter in sauces -> contains_dairy, mayonnaise -> contains_eggs, bacon bits in salad -> contains_pork). When uncertain, INCLUDE the warning — it is safer to warn than to miss an allergen.
+    - "contains_fish" is for fish only; "contains_shellfish" is for crustaceans and molluscs (shrimp, prawns, crab, lobster, mussels, oysters, squid, octopus). These are separate allergies — tag them separately. Mixed seafood dishes get both.
+    - "spicy": the dish is typically hot/spicy, or the menu marks it as such (chili icon, "scharf", "piccante").
+    - "sweet": desserts and clearly sweet dishes or drinks.
+    - "low_calorie": add ONLY for clearly light dishes (fresh salads without heavy dressing, steamed vegetables, clear soups). When in doubt, omit.
+    - Plain drinks (water, espresso, tea) usually get [] or just relevant tags (wine -> ["contains_alcohol"], latte -> ["contains_dairy"]).
+    - If you cannot judge the dish at all, return [].
 
 Also identify:
 - source_language: ISO code of the menu's primary language (de, en, it, fr, es, etc.)
@@ -51,7 +63,8 @@ Return ONLY valid JSON in this schema:
       "category": "...",
       "category_english": "...",
       "visual_appearance": "...",
-      "price": "..."
+      "price": "...",
+      "dietary_tags": ["contains_dairy", "contains_gluten"]
     }
   ]
 }
@@ -64,6 +77,7 @@ Critical rules:
 - Interpret superscript or raised cents as decimal - never output prices like "1400" as whole numbers
 - If you cannot read part of the menu clearly, still include what you can see
 - ENGLISH FIELDS (name_english, description_english, category_english): only fill these when the original lacks English. Whenever the original text already contains English, the corresponding English field MUST be "". When the original has multiple non-English languages, output a SINGLE English translation - do not duplicate it once per language.
+- dietary_tags: use ONLY values from the allowed list above. Never invent new tag names.
 """
 
 async def extract_menu_from_image(

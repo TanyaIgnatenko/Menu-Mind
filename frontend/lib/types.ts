@@ -10,6 +10,7 @@ export interface Dish {
   category_english: string;
   visual_appearance: string;
   price: string;
+  dietary_tags?: string[];
   image_status: ImageStatus;
   image_url: string;
   image_error: string;

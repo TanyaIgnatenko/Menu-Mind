@@ -1,7 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 import type { Menu } from "@/lib/types";
 
+import { DietaryFilters, filterDishes } from "./DietaryFilters";
 import { DishCard } from "./DishCard";
 
 interface Props {
@@ -9,7 +12,26 @@ interface Props {
 }
 
 export function MenuDisplay({ menu }: Props) {
-  const grouped = menu.dishes.reduce<Record<string, typeof menu.dishes>>(
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+
+  const toggleFilter = (filterId: string) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(filterId)) {
+        next.delete(filterId);
+      } else {
+        next.add(filterId);
+      }
+      return next;
+    });
+  };
+
+  const filteredDishes = useMemo(
+    () => filterDishes(menu.dishes, activeFilters),
+    [menu.dishes, activeFilters],
+  );
+
+  const grouped = filteredDishes.reduce<Record<string, typeof menu.dishes>>(
     (acc, dish) => {
       const cat = dish.category || "Other";
       if (!acc[cat]) acc[cat] = [];
@@ -37,6 +59,13 @@ export function MenuDisplay({ menu }: Props) {
         Source language: {menu.source_language} · {menu.dishes.length} dishes
       </p>
 
+      <DietaryFilters
+        dishes={menu.dishes}
+        active={activeFilters}
+        onToggle={toggleFilter}
+        shownCount={filteredDishes.length}
+      />
+
       {/* Sticky category navigation — only when there is more than one category */}
       {categories.length > 1 && (
         <nav className="sticky top-0 z-10 -mx-4 border-b bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -52,6 +81,21 @@ export function MenuDisplay({ menu }: Props) {
             ))}
           </div>
         </nav>
+      )}
+
+      {filteredDishes.length === 0 && activeFilters.size > 0 && (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            No dishes match the selected filters.
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveFilters(new Set())}
+            className="mt-3 text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
       )}
 
       {categories.map((category, index) => {

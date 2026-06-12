@@ -24,6 +24,14 @@ class Dish(BaseModel):
         "(shape, colors, plating) — used to guide image generation",
     )
 
+    dietary_tags: list[str] = Field(
+        default_factory=list,
+        description="Dietary/preference tags. Suitability tags (vegan, vegetarian, "
+        "low_calorie, healthy) are added only when confident; contains_* warnings "
+        "are added whenever the ingredient is plausibly present; sensory tags "
+        "(spicy, sweet) describe typical preparation",
+    )
+
     # Image generation fields (Phase 4)
     image_status: ImageStatus = Field("pending", description="Image generation status")
     image_url: str = Field("", description="URL to generated dish image, empty if not ready")
@@ -41,6 +49,7 @@ class Dish(BaseModel):
                 "category_english": "Main Courses",
                 "visual_appearance": "golden breaded cutlet on a plate with fried potatoes",
                 "price": "14,90 EUR",
+                "dietary_tags": ["contains_gluten", "contains_dairy"],
                 "image_status": "ready",
                 "image_url": "/images/abc/0.jpg",
                 "image_error": "",
