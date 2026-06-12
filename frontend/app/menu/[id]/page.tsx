@@ -7,6 +7,7 @@ import { notFound, useParams } from "next/navigation";
 
 import { MenuDisplay } from "@/components/MenuDisplay";
 import { ShareButton } from "@/components/ShareButton";
+import { Wordmark } from "@/components/Wordmark";
 import { Button } from "@/components/ui/button";
 import { getMenu, NotFoundError } from "@/lib/api";
 import { addToHistory } from "@/lib/history";
@@ -57,7 +58,8 @@ export default function MenuPage() {
 
   if (error === "other") {
     return (
-      <main className="container mx-auto max-w-2xl p-4 py-8">
+      <main className="container mx-auto max-w-3xl px-4 py-8 md:py-12">
+        <Wordmark asLink />
         <p className="text-sm text-muted-foreground">
           Couldn&apos;t load this menu. Try again later.
         </p>
@@ -72,24 +74,29 @@ export default function MenuPage() {
 
   if (!menu) {
     return (
-      <main className="container mx-auto max-w-2xl p-4 py-8">
-        <p className="text-sm text-muted-foreground">Loading menu...</p>
+      <main className="container mx-auto max-w-3xl px-4 py-8 md:py-12">
+        <Wordmark asLink />
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <span className="h-2 w-2 rounded-full bg-coral dot-bounce" />
+          <span
+            className="h-2 w-2 rounded-full bg-navy dot-bounce"
+            style={{ animationDelay: "0.15s" }}
+          />
+          <span
+            className="h-2 w-2 rounded-full bg-gold dot-bounce"
+            style={{ animationDelay: "0.3s" }}
+          />
+          <p className="text-sm">Loading menu...</p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="container mx-auto max-w-2xl p-4 py-8">
-      <header className="mb-8">
-        <Link href="/">
-          <h1 className="text-3xl font-bold">MenuMind</h1>
-        </Link>
-        <p className="text-muted-foreground">
-          Eat with confidence, anywhere in the world.
-        </p>
-      </header>
+    <main className="container mx-auto max-w-3xl px-4 py-8 md:py-12">
+      <Wordmark asLink />
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div className="flex gap-2">
           <Link href="/">
             <Button variant="outline">Upload another menu</Button>

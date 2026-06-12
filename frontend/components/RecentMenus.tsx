@@ -57,8 +57,10 @@ export function RecentMenus({
   };
 
   return (
-    <section className="mt-8">
-      <h2 className="mb-3 text-lg font-semibold">Recent menus</h2>
+    <section className="mt-10">
+      <h2 className="mb-3 font-display text-xl font-semibold text-navy">
+        Recent menus
+      </h2>
       <div className="space-y-2">
         {entries.map((entry) => {
           const meta = [
@@ -73,7 +75,7 @@ export function RecentMenus({
           return (
             <div
               key={entry.id}
-              className="flex items-center gap-2 rounded-lg border bg-card p-3"
+              className="flex items-center gap-2 rounded-lg bg-card p-3.5 shadow-card transition-shadow hover:shadow-card-hover"
             >
               {isEditing ? (
                 <input
@@ -85,7 +87,7 @@ export function RecentMenus({
                     if (e.key === "Escape") cancelEdit();
                   }}
                   placeholder="Name this menu"
-                  className="min-w-0 flex-1 rounded border bg-background px-2 py-1 text-sm"
+                  className="min-w-0 flex-1 rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               ) : (
                 <button
@@ -93,7 +95,9 @@ export function RecentMenus({
                   disabled={isOpening}
                   className="min-w-0 flex-1 text-left disabled:opacity-60"
                 >
-                  <p className="truncate font-medium">{titleFor(entry)}</p>
+                  <p className="truncate font-medium text-navy">
+                    {titleFor(entry)}
+                  </p>
                   <p className="truncate text-sm text-muted-foreground">{meta}</p>
                 </button>
               )}
@@ -103,14 +107,14 @@ export function RecentMenus({
                   <button
                     onClick={() => commitEdit(entry.id)}
                     aria-label="Save name"
-                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="rounded-full p-1.5 text-muted-foreground hover:bg-gold/50 hover:text-navy"
                   >
                     <Check className="h-4 w-4" />
                   </button>
                   <button
                     onClick={cancelEdit}
                     aria-label="Cancel"
-                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="rounded-full p-1.5 text-muted-foreground hover:bg-gold/50 hover:text-navy"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -122,14 +126,14 @@ export function RecentMenus({
                   <button
                     onClick={() => startEdit(entry)}
                     aria-label="Rename"
-                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="rounded-full p-1.5 text-muted-foreground hover:bg-gold/50 hover:text-navy"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => onRemove(entry.id)}
                     aria-label="Remove from history"
-                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="rounded-full p-1.5 text-muted-foreground hover:bg-coral/15 hover:text-coral"
                   >
                     <X className="h-4 w-4" />
                   </button>

@@ -2,9 +2,10 @@
 
 import { useRef, useState } from "react";
 
+import { Camera } from "lucide-react";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { uploadMenu } from "@/lib/api";
 import type { Menu } from "@/lib/types";
 
@@ -43,9 +44,13 @@ export function MenuUpload({ onUploaded }: Props) {
   }
 
   return (
-    <Card className="border-2 border-dashed p-8">
-      <div className="text-center">
-        <p className="mb-6 text-muted-foreground">
+    <div className="rounded-lg border-2 border-dashed border-coral/40 bg-card p-8 shadow-card transition-colors hover:border-coral/70">
+      <div className="flex flex-col items-center text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gold/60">
+          <Camera className="h-7 w-7 text-navy" aria-hidden="true" />
+        </div>
+
+        <p className="mb-6 max-w-xs text-muted-foreground">
           Upload a photo of any menu to translate and understand it.
         </p>
 
@@ -72,6 +77,6 @@ export function MenuUpload({ onUploaded }: Props) {
           </Alert>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

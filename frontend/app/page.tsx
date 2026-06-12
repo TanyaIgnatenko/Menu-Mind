@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { MenuUpload } from "@/components/MenuUpload";
 import { RecentMenus } from "@/components/RecentMenus";
+import { Wordmark } from "@/components/Wordmark";
 import {
   addToHistory,
   getHistory,
@@ -36,13 +37,8 @@ export default function Home() {
   }
 
   return (
-    <main className="container mx-auto max-w-2xl p-4 py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold">MenuMind</h1>
-        <p className="text-muted-foreground">
-          Eat with confidence, anywhere in the world.
-        </p>
-      </header>
+    <main className="container mx-auto max-w-2xl px-4 py-8 md:py-12">
+      <Wordmark />
 
       <MenuUpload onUploaded={handleUploaded} />
       <RecentMenus

@@ -10,12 +10,20 @@ const config: Config = {
   theme: {
     container: { center: true, padding: "2rem", screens: { "2xl": "1400px" } },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-outfit)", "system-ui", "sans-serif"],
+        display: ["var(--font-fraunces)", "Georgia", "serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        navy: "hsl(var(--navy))",
+        dill: "hsl(var(--dill))",
+        coral: "hsl(var(--coral))",
+        gold: "hsl(var(--gold))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -43,8 +51,12 @@ const config: Config = {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 8px)",
+      },
+      boxShadow: {
+        card: "0 2px 12px hsl(339 53% 23% / 0.08)",
+        "card-hover": "0 4px 20px hsl(339 53% 23% / 0.12)",
       },
     },
   },

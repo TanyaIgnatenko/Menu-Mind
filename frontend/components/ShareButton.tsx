@@ -39,28 +39,30 @@ export function ShareButton({ menuId }: Props) {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-navy/60 p-4 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
           <div
-            className="relative w-full max-w-sm rounded-xl bg-card p-6 shadow-xl"
+            className="relative w-full max-w-sm rounded-lg bg-card p-6 shadow-card-hover"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setOpen(false)}
               aria-label="Close"
-              className="absolute right-3 top-3 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="absolute right-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-gold/50 hover:text-navy"
             >
               <X className="h-4 w-4" />
             </button>
 
-            <h2 className="mb-1 text-lg font-semibold">Share this menu</h2>
+            <h2 className="mb-1 font-display text-xl font-semibold text-navy">
+              Share this menu
+            </h2>
             <p className="mb-4 text-sm text-muted-foreground">
               Scan the QR code or copy the link.
             </p>
 
-            <div className="mb-4 flex justify-center rounded-lg bg-white p-4">
-              <QRCodeSVG value={shareUrl} size={200} />
+            <div className="mb-4 flex justify-center rounded-lg border-2 border-gold bg-white p-4">
+              <QRCodeSVG value={shareUrl} size={200} fgColor="#5A1C32" />
             </div>
 
             <div className="flex gap-2">
@@ -68,7 +70,7 @@ export function ShareButton({ menuId }: Props) {
                 type="text"
                 readOnly
                 value={shareUrl}
-                className="min-w-0 flex-1 rounded border bg-background px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-full border border-input bg-background px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={(e) => (e.target as HTMLInputElement).select()}
               />
               <Button onClick={handleCopy} variant="outline" size="sm">

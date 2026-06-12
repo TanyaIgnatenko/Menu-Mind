@@ -94,21 +94,37 @@ interface DietaryFiltersProps {
   shownCount: number;
 }
 
+// Color encodes meaning: "needs" are serious (navy when active),
+// "prefs" are appetite (gold when active).
+const CHIP_STYLES: Record<FilterGroup, { active: string; idle: string }> = {
+  needs: {
+    active: "border-navy bg-navy text-white",
+    idle: "border-navy/25 bg-card text-navy hover:border-navy/60",
+  },
+  prefs: {
+    active: "border-gold bg-gold text-navy",
+    idle: "border-navy/25 bg-card text-navy hover:border-gold",
+  },
+};
+
 function ChipRow({
   title,
+  group,
   filters,
   active,
   onToggle,
 }: {
   title: string;
+  group: FilterGroup;
   filters: FilterDef[];
   active: Set<string>;
   onToggle: (id: string) => void;
 }) {
   if (filters.length === 0) return null;
+  const styles = CHIP_STYLES[group];
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {title}
       </p>
       <div className="flex flex-wrap gap-2">
@@ -119,11 +135,10 @@ function ChipRow({
               key={f.id}
               type="button"
               onClick={() => onToggle(f.id)}
+              aria-pressed={isActive}
               className={
-                "rounded-full border px-3 py-1 text-sm transition-colors " +
-                (isActive
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-input bg-background hover:bg-accent")
+                "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors " +
+                (isActive ? styles.active : styles.idle)
               }
             >
               {f.label}
@@ -148,11 +163,23 @@ export function DietaryFilters({
   const prefs = available.filter((f) => f.group === "prefs");
 
   return (
-    <div className="space-y-3">
-      <ChipRow title="Dietary needs" filters={needs} active={active} onToggle={onToggle} />
-      <ChipRow title="Show me" filters={prefs} active={active} onToggle={onToggle} />
+    <div className="space-y-4 rounded-lg border bg-card p-4 shadow-card">
+      <ChipRow
+        title="Dietary needs"
+        group="needs"
+        filters={needs}
+        active={active}
+        onToggle={onToggle}
+      />
+      <ChipRow
+        title="Show me"
+        group="prefs"
+        filters={prefs}
+        active={active}
+        onToggle={onToggle}
+      />
       {active.size > 0 && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs font-medium text-coral">
           Showing {shownCount} of {dishes.length} dishes
         </p>
       )}
