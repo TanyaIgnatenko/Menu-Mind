@@ -7,6 +7,7 @@ import { Camera } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { uploadMenu, UploadLimitError } from "@/lib/api";
+import { capture } from "@/lib/posthog";
 import type { Menu } from "@/lib/types";
 
 import { LoadingState } from "./LoadingState";
@@ -15,7 +16,6 @@ interface Props {
   onUploaded: (menu: Menu) => void;
 }
 
-/** Format a UTC Date as a friendly local time string, e.g. "3:00 AM" or "10:00". */
 function formatLocalTime(date: Date): string {
   return date.toLocaleTimeString(undefined, {
     hour: "2-digit",
@@ -39,11 +39,27 @@ export function MenuUpload({ onUploaded }: Props) {
 
     try {
       const menu = await uploadMenu(file);
+
+      capture("menu_uploaded", {
+        menu_id: menu.id,
+        dish_count: menu.dishes.length,
+        source_language: menu.source_language ?? "unknown",
+        is_cache_hit: false, // cache hits return instantly — approximate
+      });
+
       onUploaded(menu);
     } catch (e) {
       if (e instanceof UploadLimitError) {
+        capture("rate_limit_hit", { scope: "ip" });
         setError({ kind: "limit", message: e.message, resetsAt: e.resetsAt });
       } else {
+        const reason =
+          e instanceof Error && e.message.includes("extraction")
+            ? "extraction_failed"
+            : e instanceof Error && e.message.includes("image")
+              ? "invalid_image"
+              : "unknown";
+        capture("menu_upload_failed", { reason });
         setError({
           kind: "generic",
           message: e instanceof Error ? e.message : "Upload failed",
@@ -57,7 +73,6 @@ export function MenuUpload({ onUploaded }: Props) {
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
-    // Reset input so the same file can be re-selected after an error.
     e.target.value = "";
   }
 

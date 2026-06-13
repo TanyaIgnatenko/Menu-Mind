@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dish } from "@/lib/types";
+import { capture } from "@/lib/posthog";
 
 type FilterMode = "exclude" | "require";
 type FilterGroup = "needs" | "prefs";
@@ -134,7 +135,15 @@ function ChipRow({
             <button
               key={f.id}
               type="button"
-              onClick={() => onToggle(f.id)}
+              onClick={() => {
+                capture("filter_applied", {
+                  filter_id: f.id,
+                  filter_label: f.label,
+                  filter_group: group,
+                  active_count: active.size + (active.has(f.id) ? -1 : 1),
+                });
+                onToggle(f.id);
+              }}
               aria-pressed={isActive}
               className={
                 "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors " +

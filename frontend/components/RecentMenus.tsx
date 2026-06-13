@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Check, Loader2, Pencil, X } from "lucide-react";
 
+import { capture } from "@/lib/posthog";
 import type { HistoryEntry } from "@/lib/history";
 
 interface Props {
@@ -91,7 +92,10 @@ export function RecentMenus({
                 />
               ) : (
                 <button
-                  onClick={() => onOpen(entry.id)}
+                  onClick={() => {
+                    capture("menu_opened_from_history", { menu_id: entry.id });
+                    onOpen(entry.id);
+                  }}
                   disabled={isOpening}
                   className="min-w-0 flex-1 text-left disabled:opacity-60"
                 >

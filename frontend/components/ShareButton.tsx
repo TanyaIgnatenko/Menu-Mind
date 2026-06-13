@@ -6,6 +6,7 @@ import { Check, Copy, Share2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 import { Button } from "@/components/ui/button";
+import { capture } from "@/lib/posthog";
 
 interface Props {
   menuId: string;
@@ -20,6 +21,11 @@ export function ShareButton({ menuId }: Props) {
       ? `${window.location.origin}/menu/${menuId}`
       : "";
 
+  function handleOpen() {
+    setOpen(true);
+    capture("menu_shared", { menu_id: menuId });
+  }
+
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -32,7 +38,7 @@ export function ShareButton({ menuId }: Props) {
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button variant="outline" onClick={handleOpen}>
         <Share2 className="mr-2 h-4 w-4" />
         Share
       </Button>
