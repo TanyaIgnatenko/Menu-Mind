@@ -40,13 +40,25 @@ class Settings(BaseSettings):
     # S3 storage (if s3_bucket is set, use S3; otherwise local filesystem)
     s3_bucket: str = ""
     s3_region: str = "eu-central-1"
-    s3_public_url_base: str = ""  # e.g. https://bucket.s3.eu-central-1.amazonaws.com (or CloudFront later)
+    s3_public_url_base: str = ""  # e.g. https://bucket.s3.eu-central-1.amazonaws.com
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "https://menu-mind-tawny.vercel.app"]
 
     # External call timeouts
     gemini_timeout_seconds: float = 60.0
+
+    # ── Rate limiting ──────────────────────────────────────────────────────────
+    # Set RATE_LIMIT_ENABLED=false in .env to bypass limits during development.
+    rate_limit_enabled: bool = True
+
+    # Max unique menus one IP can upload per calendar day (UTC).
+    # Cache hits (same image re-uploaded) never count toward this limit.
+    rate_limit_per_ip_daily: int = 5
+
+    # Hard cap on total unique menus processed by the whole app per day.
+    # Protects against a single beta invite going viral unexpectedly.
+    rate_limit_global_daily: int = 50
 
 
 @lru_cache

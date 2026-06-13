@@ -6,7 +6,7 @@ import { Camera } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { uploadMenu } from "@/lib/api";
+import { uploadMenu, UploadLimitError } from "@/lib/api";
 import type { Menu } from "@/lib/types";
 
 import { LoadingState } from "./LoadingState";
@@ -15,9 +15,22 @@ interface Props {
   onUploaded: (menu: Menu) => void;
 }
 
+/** Format a UTC Date as a friendly local time string, e.g. "3:00 AM" or "10:00". */
+function formatLocalTime(date: Date): string {
+  return date.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
+type UploadError =
+  | { kind: "limit"; message: string; resetsAt: Date }
+  | { kind: "generic"; message: string };
+
 export function MenuUpload({ onUploaded }: Props) {
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UploadError | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
@@ -28,7 +41,14 @@ export function MenuUpload({ onUploaded }: Props) {
       const menu = await uploadMenu(file);
       onUploaded(menu);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      if (e instanceof UploadLimitError) {
+        setError({ kind: "limit", message: e.message, resetsAt: e.resetsAt });
+      } else {
+        setError({
+          kind: "generic",
+          message: e instanceof Error ? e.message : "Upload failed",
+        });
+      }
     } finally {
       setIsUploading(false);
     }
@@ -37,6 +57,8 @@ export function MenuUpload({ onUploaded }: Props) {
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
+    // Reset input so the same file can be re-selected after an error.
+    e.target.value = "";
   }
 
   if (isUploading) {
@@ -65,7 +87,7 @@ export function MenuUpload({ onUploaded }: Props) {
 
         <Button
           onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
+          disabled={isUploading || error?.kind === "limit"}
           size="lg"
         >
           Choose photo
@@ -73,7 +95,20 @@ export function MenuUpload({ onUploaded }: Props) {
 
         {error && (
           <Alert variant="destructive" className="mt-6 text-left">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error.kind === "limit" ? (
+                <>
+                  <span className="font-semibold">Daily limit reached.</span>{" "}
+                  {error.message} Resets at{" "}
+                  <span className="font-semibold">
+                    {formatLocalTime(error.resetsAt)}
+                  </span>
+                  .
+                </>
+              ) : (
+                error.message
+              )}
+            </AlertDescription>
           </Alert>
         )}
       </div>

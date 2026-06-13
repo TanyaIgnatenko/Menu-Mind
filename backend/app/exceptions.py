@@ -27,6 +27,19 @@ class InvalidImageError(MenuMindError):
     """Uploaded image is invalid, unsupported, or too large."""
 
 
+class UploadLimitError(MenuMindError):
+    """User or global daily upload limit reached.
+
+    Attributes:
+        scope: "ip" if the per-user limit was hit, "global" if the app-wide
+               daily cap was hit. Useful for logging and monitoring.
+    """
+
+    def __init__(self, message: str, scope: str = "ip") -> None:
+        super().__init__(message)
+        self.scope = scope
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register FastAPI exception handlers for our domain errors.
 
@@ -72,4 +85,12 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=429,
             content={"error": "rate_limited", "message": "Please try again in a moment."},
+        )
+
+    @app.exception_handler(UploadLimitError)
+    async def upload_limit_handler(_request: Request, exc: UploadLimitError) -> JSONResponse:
+        logger.warning("upload_limit_reached", scope=exc.scope, message=str(exc))
+        return JSONResponse(
+            status_code=429,
+            content={"error": "upload_limit_reached", "message": str(exc)},
         )
