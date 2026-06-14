@@ -20,6 +20,7 @@ export interface Menu {
   id: string;
   source_language: string;
   restaurant_name: string | null;
+  cuisine_type: string | null;
   dishes: Dish[];
   created_at: string;
 }

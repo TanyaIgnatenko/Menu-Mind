@@ -11,12 +11,29 @@ from app.schemas.menu import Menu, MenuCreate
 
 
 def _record_to_menu(record: MenuRecord) -> Menu:
-    """Convert a MenuRecord row to a Menu API schema."""
-    dishes = [Dish.model_validate(d) for d in record.dishes_json]
+    """Convert a MenuRecord row to a Menu API schema.
+
+    cuisine_type is stored inside dishes_json as a top-level key
+    (alongside the dishes list) to avoid a DB migration.
+    """
+    raw: list | dict = record.dishes_json
+
+    # Support both storage shapes:
+    #   old shape: dishes_json is a plain list of dish dicts
+    #   new shape: dishes_json is {"cuisine_type": "...", "dishes": [...]}
+    if isinstance(raw, dict):
+        cuisine_type: str | None = raw.get("cuisine_type")
+        dishes_data: list = raw.get("dishes", [])
+    else:
+        cuisine_type = None
+        dishes_data = raw
+
+    dishes = [Dish.model_validate(d) for d in dishes_data]
     return Menu(
         id=record.id,
         source_language=record.source_language,
         restaurant_name=record.restaurant_name,
+        cuisine_type=cuisine_type,
         dishes=dishes,
         created_at=record.created_at,
     )
@@ -32,12 +49,20 @@ async def get_cached_menu(db: AsyncSession, image_hash: str) -> Menu | None:
 
 
 async def save_menu(db: AsyncSession, image_hash: str, menu: MenuCreate) -> Menu:
-    """Persist an extracted menu. Idempotent: returns existing record on conflict."""
+    """Persist an extracted menu. Idempotent: returns existing record on conflict.
+
+    cuisine_type is stored as a top-level key inside the dishes_json JSONB
+    field to avoid adding a new column and running a migration.
+    """
+    dishes_json: dict = {
+        "cuisine_type": menu.cuisine_type,
+        "dishes": [d.model_dump() for d in menu.dishes],
+    }
     record = MenuRecord(
         image_hash=image_hash,
         source_language=menu.source_language,
         restaurant_name=menu.restaurant_name,
-        dishes_json=[d.model_dump() for d in menu.dishes],
+        dishes_json=dishes_json,
     )
     db.add(record)
     try:

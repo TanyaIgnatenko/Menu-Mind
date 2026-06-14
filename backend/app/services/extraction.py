@@ -48,11 +48,13 @@ vegan, vegetarian, contains_pork, contains_beef, contains_chicken, contains_turk
 Also identify:
 - source_language: ISO code of the menu's primary language (de, en, it, fr, es, etc.)
 - restaurant_name: if visible on the menu, otherwise null
+- cuisine_type: the cuisine style of this menu in English, e.g. "Italian", "Japanese", "German", "French", "Mexican", "Chinese", "Indian", "Mediterranean", "Middle Eastern", "Thai", "Korean", "American", "Greek", "Spanish", "Vietnamese", "Turkish", "Lebanese", "Peruvian", "Fusion". Infer from dish names and ingredients even if not stated explicitly. Use a single short noun or adjective. Return null only if the cuisine is truly ambiguous or mixed with no dominant style.
 
 Return ONLY valid JSON in this schema:
 {
   "source_language": "de",
   "restaurant_name": "Restaurant Name" | null,
+  "cuisine_type": "Italian" | null,
   "dishes": [
     {
       "name_original": "...",
@@ -125,10 +127,12 @@ async def extract_menu_from_image(
 
     source_language = parsed.get("source_language") or "unknown"
     restaurant_name = parsed.get("restaurant_name")
+    cuisine_type = parsed.get("cuisine_type") or None
 
     menu = MenuCreate(
         source_language=source_language,
         restaurant_name=restaurant_name,
+        cuisine_type=cuisine_type,
         dishes=dishes,
     )
 

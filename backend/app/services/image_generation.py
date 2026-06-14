@@ -185,12 +185,26 @@ async def generate_images_for_menu(menu_id: UUID) -> None:
                 logger.error("image_gen_menu_not_found", menu_id=str(menu_id))
                 return
 
-            dishes_data = list(menu_record.dishes_json)
+            # dishes_json может быть dict (новый формат с cuisine_type)
+            # или list (старый формат) — поддерживаем оба.
+            raw = menu_record.dishes_json
+            if isinstance(raw, dict):
+                cuisine_type = raw.get("cuisine_type")
+                dishes_data = list(raw.get("dishes", []))
+            else:
+                cuisine_type = None
+                dishes_data = list(raw)
+
             dishes = [Dish.model_validate(d) for d in dishes_data]
 
             for d in dishes_data:
                 d["image_status"] = "generating"
-            menu_record.dishes_json = dishes_data
+
+            # Сохраняем обратно в том же формате что пришло
+            if isinstance(raw, dict):
+                menu_record.dishes_json = {"cuisine_type": cuisine_type, "dishes": dishes_data}
+            else:
+                menu_record.dishes_json = dishes_data
             await _persist(session, menu_record)
 
         client = FalClient()
@@ -220,7 +234,14 @@ async def generate_images_for_menu(menu_id: UUID) -> None:
                     menu_record = await _load_menu(session, menu_id)
                     if menu_record is None:
                         return
-                    current = list(menu_record.dishes_json)
+                    raw2 = menu_record.dishes_json
+                    if isinstance(raw2, dict):
+                        cuisine_type2 = raw2.get("cuisine_type")
+                        current = list(raw2.get("dishes", []))
+                    else:
+                        cuisine_type2 = None
+                        current = list(raw2)
+
                     if idx < len(current):
                         current[idx] = {
                             **current[idx],
@@ -228,7 +249,10 @@ async def generate_images_for_menu(menu_id: UUID) -> None:
                             "image_url": url,
                             "image_error": error,
                         }
-                        menu_record.dishes_json = current
+                        if isinstance(raw2, dict):
+                            menu_record.dishes_json = {"cuisine_type": cuisine_type2, "dishes": current}
+                        else:
+                            menu_record.dishes_json = current
                         await _persist(session, menu_record)
             except Exception as e:
                 logger.error("image_db_update_failed", dish=dish.name_english, error=str(e))

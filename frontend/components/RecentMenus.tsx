@@ -26,7 +26,7 @@ function formatRelativeTime(ts: number): string {
 }
 
 function titleFor(entry: HistoryEntry): string {
-  return entry.customName || entry.restaurantName || "Menu";
+  return entry.customName || entry.restaurantName || entry.autoName || "Menu";
 }
 
 export function RecentMenus({
