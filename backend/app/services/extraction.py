@@ -47,7 +47,7 @@ vegan, vegetarian, contains_pork, contains_beef, contains_chicken, contains_turk
 
 Also identify:
 - source_language: ISO code of the menu's primary language (de, en, it, fr, es, etc.)
-- restaurant_name: if visible on the menu, otherwise null
+- restaurant_name: the restaurant or establishment name. Look everywhere — header, footer, watermark, diagonal background text, logo area, corners. Even faint or decorative text counts. If you see any name (e.g. "Trattoria Sapore") anywhere on the image, return it. Return null only if truly absent.
 - cuisine_type: the cuisine style of this menu in English, e.g. "Italian", "Japanese", "German", "French", "Mexican", "Chinese", "Indian", "Mediterranean", "Middle Eastern", "Thai", "Korean", "American", "Greek", "Spanish", "Vietnamese", "Turkish", "Lebanese", "Peruvian", "Fusion". Infer from dish names and ingredients even if not stated explicitly. Use a single short noun or adjective. Return null only if the cuisine is truly ambiguous or mixed with no dominant style.
 
 Return ONLY valid JSON in this schema:
