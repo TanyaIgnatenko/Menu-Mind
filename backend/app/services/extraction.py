@@ -16,8 +16,8 @@ Extract every dish/drink visible on the menu. For each item, provide these field
 - name_original: dish name exactly as written on the menu (in source language)
 - name_english: English version of the name. Set this to "" ONLY if name_original is genuinely in English (composed of English words or an English-language menu entry) OR if it already includes an explicit English translation separated by a slash/dash (e.g. "Crema di Pomodoro / Tomato Cream"). LOANWORDS DO NOT COUNT AS ALREADY-ENGLISH: dishes like "Spaghetti alla Carbonara", "Lasagna", "Gnocchi", "Sushi", "Tiramisu", "Pierogi" are Italian/Japanese/Polish names borrowed into English — for these you MUST still provide name_english, either as a clean English translation ("Pasta with Pancetta and Egg") or, when the name has no real English equivalent, simply repeat or transliterate the dish name in name_english so the field is populated. The original may contain the SAME item in several non-English languages (e.g. German + Russian) — in that case give ONE single English translation, do NOT translate each language separately.
 - description_original: description text from the menu, or empty string if none
-- description_english: English translation of the description. PROVIDE THIS ONLY IF the original description does not already contain English. If description_original is already English or already includes an English version, set this to "". If the original repeats the same description in multiple non-English languages (e.g. German and Russian), produce ONE single English translation — never concatenate or duplicate translations per language. Empty string if there is no description.
-- fun_facts: 2-4 short interesting facts or highlights about this dish. Focus on: origin, key ingredients, cooking method, cultural significance, flavor profile, common variations. Write in English. Each fact is 1-2 sentences. Return as a list of strings. Return [] if nothing interesting to say.
+- description_english: ALWAYS provide a clear English description of the dish. If description_original is in another language, translate it to English. If description_original is already in English, copy it here (cleaned up). If there are multiple languages in the original, produce ONE single English version — never concatenate or duplicate translations per language. If the menu has no description for this dish, write a brief 1-sentence English description based on the dish name. This field must NEVER be empty.
+- about: a single engaging paragraph (2-4 sentences) describing this dish for a curious traveler. Cover what it is, key ingredients, flavor profile, and any cultural or origin note that fits naturally. Write in flowing English prose, NOT a list. Make it warm and appetizing. Empty string if the dish is completely unrecognisable.
 - nutrition: estimated nutritional values per typical serving of this dish. Base your estimate on standard culinary knowledge — this is an approximation, not a medical fact. Return an object with:
   - calories: integer (kcal per serving), e.g. 450
   - protein_g: float (grams of protein), e.g. 22.5
@@ -68,7 +68,7 @@ Return ONLY valid JSON in this schema:
       "name_english": "...",
       "description_original": "...",
       "description_english": "...",
-      "fun_facts": ["...", "..."],
+      "about": "A flowing paragraph describing the dish...",
       "nutrition": {"calories": 450, "protein_g": 22.5, "carbs_g": 38.0, "fat_g": 18.5},
       "size": "",
       "category": "...",
@@ -87,7 +87,7 @@ Critical rules:
 - Do not include menu numbering codes (e.g. "675.") as part of the dish name
 - Interpret superscript or raised cents as decimal - never output prices like "1400" as whole numbers
 - If you cannot read part of the menu clearly, still include what you can see
-- ENGLISH FIELDS (name_english, description_english, category_english): only fill these when the original lacks English. Whenever the original text already contains English, the corresponding English field MUST be "". When the original has multiple non-English languages, output a SINGLE English translation - do not duplicate it once per language.
+- ENGLISH FIELDS: name_english and category_english — only fill when the original lacks English (empty "" if original is already English). BUT description_english is SPECIAL: ALWAYS fill it with an English description, never leave it empty. When the original has multiple non-English languages, output a SINGLE English translation — never duplicate it once per language.
 - dietary_tags: use ONLY values from the allowed list above. Never invent new tag names.
 """
 

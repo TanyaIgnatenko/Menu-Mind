@@ -32,10 +32,10 @@ class Dish(BaseModel):
         "(spicy, sweet) describe typical preparation",
     )
 
-    fun_facts: list[str] = Field(
-        default_factory=list,
-        description="2-4 interesting facts about the dish: origin, ingredients, "
-        "cooking method, cultural significance, flavor profile",
+    about: str = Field(
+        "",
+        description="A single engaging paragraph describing the dish: "
+        "what it is, ingredients, flavor, cultural note. Flowing prose, not a list.",
     )
 
     nutrition: dict | None = Field(
