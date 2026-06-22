@@ -35,3 +35,17 @@ Thumbs.db
 
 # Docker volumes
 postgres_data/
+# Локальные утилиты и тестовые артефакты
+check_desc.py
+check_menu.py
+clear_db.py
+list_gemini_models.py
+list_tables.py
+test_gemini_image.py
+test_imagen.py
+test_imagen_output.png
+test_seledka.png
+
+# Локальные деплой-скрипты
+redeploy.ps1
+reset-local.ps1
