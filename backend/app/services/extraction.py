@@ -17,6 +17,13 @@ Extract every dish/drink visible on the menu. For each item, provide these field
 - name_english: English version of the name. Set this to "" ONLY if name_original is genuinely in English (composed of English words or an English-language menu entry) OR if it already includes an explicit English translation separated by a slash/dash (e.g. "Crema di Pomodoro / Tomato Cream"). LOANWORDS DO NOT COUNT AS ALREADY-ENGLISH: dishes like "Spaghetti alla Carbonara", "Lasagna", "Gnocchi", "Sushi", "Tiramisu", "Pierogi" are Italian/Japanese/Polish names borrowed into English — for these you MUST still provide name_english, either as a clean English translation ("Pasta with Pancetta and Egg") or, when the name has no real English equivalent, simply repeat or transliterate the dish name in name_english so the field is populated. The original may contain the SAME item in several non-English languages (e.g. German + Russian) — in that case give ONE single English translation, do NOT translate each language separately.
 - description_original: description text from the menu, or empty string if none
 - description_english: English translation of the description. PROVIDE THIS ONLY IF the original description does not already contain English. If description_original is already English or already includes an English version, set this to "". If the original repeats the same description in multiple non-English languages (e.g. German and Russian), produce ONE single English translation — never concatenate or duplicate translations per language. Empty string if there is no description.
+- fun_facts: 2-4 short interesting facts or highlights about this dish. Focus on: origin, key ingredients, cooking method, cultural significance, flavor profile, common variations. Write in English. Each fact is 1-2 sentences. Return as a list of strings. Return [] if nothing interesting to say.
+- nutrition: estimated nutritional values per typical serving of this dish. Base your estimate on standard culinary knowledge — this is an approximation, not a medical fact. Return an object with:
+  - calories: integer (kcal per serving), e.g. 450
+  - protein_g: float (grams of protein), e.g. 22.5
+  - carbs_g: float (grams of carbohydrates), e.g. 38.0
+  - fat_g: float (grams of fat), e.g. 18.5
+  If you truly cannot estimate (e.g. dish is completely unrecognisable), return null.
 - size: serving size if explicitly specified (e.g. "20cl", "2cl"), otherwise empty
 - category: section header from the menu (e.g. "Suppen", "Pasta"). Preserve slash-separated bilingual headers like "Zuppe / Suppen".
 - category_english: clean English translation of the category. PROVIDE THIS ONLY IF the category does not already contain English. If the category is already English or includes an English version (e.g. "Zuppe / Soups"), set this to "". For multilingual non-English categories (e.g. "Vorspeisen & Salate // Закуски & салаты"), give ONE single English translation (e.g. "Appetizers & Salads").
@@ -61,6 +68,8 @@ Return ONLY valid JSON in this schema:
       "name_english": "...",
       "description_original": "...",
       "description_english": "...",
+      "fun_facts": ["...", "..."],
+      "nutrition": {"calories": 450, "protein_g": 22.5, "carbs_g": 38.0, "fat_g": 18.5},
       "size": "",
       "category": "...",
       "category_english": "...",

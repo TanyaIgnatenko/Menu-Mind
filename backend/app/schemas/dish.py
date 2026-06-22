@@ -32,6 +32,18 @@ class Dish(BaseModel):
         "(spicy, sweet) describe typical preparation",
     )
 
+    fun_facts: list[str] = Field(
+        default_factory=list,
+        description="2-4 interesting facts about the dish: origin, ingredients, "
+        "cooking method, cultural significance, flavor profile",
+    )
+
+    nutrition: dict | None = Field(
+        None,
+        description="Estimated nutrition per serving: "
+        "{calories: int, protein_g: float, carbs_g: float, fat_g: float}",
+    )
+
     # Image generation fields (Phase 4)
     image_status: ImageStatus = Field("pending", description="Image generation status")
     image_url: str = Field("", description="URL to generated dish image, empty if not ready")
