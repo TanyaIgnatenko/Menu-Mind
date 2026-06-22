@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="#8E2A4C"/>
+
+  <!-- Fork — 4 tines -->
+  <line x1="188" y1="120" x2="188" y2="340" stroke="#F6EFE7" stroke-width="48" stroke-linecap="round"/>
+  <line x1="252" y1="120" x2="252" y2="340" stroke="#F6EFE7" stroke-width="48" stroke-linecap="round"/>
+  <line x1="316" y1="120" x2="316" y2="340" stroke="#F6EFE7" stroke-width="48" stroke-linecap="round"/>
+  <line x1="380" y1="120" x2="380" y2="340" stroke="#F6EFE7" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- Tine bridge -->
+  <path d="M188 340 Q188 420 284 440 Q380 420 380 340"
+        fill="none" stroke="#F6EFE7" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- Handle -->
+  <line x1="284" y1="440" x2="284" y2="790" stroke="#F6EFE7" stroke-width="56" stroke-linecap="round"/>
+
+  <!-- Menu lines — right side -->
+  <line x1="440" y1="220" x2="840" y2="220" stroke="#DDE5CE" stroke-width="52" stroke-linecap="round"/>
+  <line x1="440" y1="360" x2="800" y2="360" stroke="#DDE5CE" stroke-width="52" stroke-linecap="round" opacity="0.70"/>
+  <line x1="440" y1="500" x2="760" y2="500" stroke="#DDE5CE" stroke-width="52" stroke-linecap="round" opacity="0.45"/>
+
+  <!-- Dill leaf -->
+  <path d="M460 700 Q590 604 840 668 Q740 820 460 700Z" fill="#5E7D4A"/>
+  <!-- Vein -->
+  <path d="M468 696 Q592 624 830 672"
+        fill="none" stroke="#F6EFE7" stroke-width="12" stroke-linecap="round" opacity="0.45"/>
+</svg>

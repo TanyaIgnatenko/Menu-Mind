@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="#8E2A4C"/>
+
+  <!-- Fork — left side -->
+  <!-- Handle -->
+  <line x1="232" y1="160" x2="232" y2="864" stroke="#F6EFE7" stroke-width="52" stroke-linecap="round"/>
+  <!-- Tines arch -->
+  <path d="M152 160 L152 380 Q232 468 312 380 L312 160"
+        fill="none" stroke="#F6EFE7" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Menu lines — center -->
+  <line x1="392" y1="280" x2="840" y2="280" stroke="#DDE5CE" stroke-width="44" stroke-linecap="round"/>
+  <line x1="392" y1="432" x2="800" y2="432" stroke="#DDE5CE" stroke-width="44" stroke-linecap="round" opacity="0.70"/>
+  <line x1="392" y1="584" x2="760" y2="584" stroke="#DDE5CE" stroke-width="44" stroke-linecap="round" opacity="0.45"/>
+
+  <!-- Dill leaf — bottom right -->
+  <path d="M460 764 Q588 648 796 712 Q700 860 460 764Z" fill="#5E7D4A"/>
+  <!-- Leaf vein -->
+  <path d="M470 758 Q590 688 786 718"
+        fill="none" stroke="#F6EFE7" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+</svg>
