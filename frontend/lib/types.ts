@@ -1,5 +1,12 @@
 export type ImageStatus = "pending" | "generating" | "ready" | "failed";
 
+export interface Nutrition {
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}
+
 export interface Dish {
   name_original: string;
   name_english: string;
@@ -11,6 +18,8 @@ export interface Dish {
   visual_appearance: string;
   price: string;
   dietary_tags?: string[];
+  fun_facts?: string[];
+  nutrition?: Nutrition | null;
   image_status: ImageStatus;
   image_url: string;
   image_error: string;
