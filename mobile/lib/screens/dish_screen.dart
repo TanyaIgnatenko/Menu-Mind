@@ -123,53 +123,69 @@ class DishScreen extends StatelessWidget {
                   _divider(),
                   const SizedBox(height: 20),
 
-                  // ── Описание ──────────────────────────────────────
-                  if (dish.descriptionEnglish.isNotEmpty ||
-                      dish.descriptionOriginal.isNotEmpty) ...[
+                  // ── Описание (только English под категорией) ────────────────────
+                  if (dish.descriptionEnglish.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      dish.descriptionEnglish,
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 14,
+                        color: Color(0xFF3D3D3D),
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+                  _divider(),
+                  const SizedBox(height: 20),
+
+                  // ── About this dish (один параграф) ──────────────
+                  if (dish.about.isNotEmpty) ...[
                     _sectionLabel('About this dish'),
                     const SizedBox(height: 10),
-                    if (dish.descriptionEnglish.isNotEmpty)
-                      Text(
-                        dish.descriptionEnglish,
-                        style: const TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 15,
-                          color: Color(0xFF3D3D3D),
-                          height: 1.6,
-                        ),
+                    Text(
+                      dish.about,
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 14,
+                        color: Color(0xFF3D3D3D),
+                        height: 1.6,
                       ),
-                    if (dish.descriptionOriginal.isNotEmpty &&
-                        dish.descriptionEnglish != dish.descriptionOriginal) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        dish.descriptionOriginal,
-                        style: const TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic,
-                          color: AppColors.textSecondary,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
+                    ),
                     const SizedBox(height: 20),
                     _divider(),
                     const SizedBox(height: 20),
                   ],
 
-                  // ── Fun facts ─────────────────────────────────────
-                  if (dish.funFacts.isNotEmpty) ...[
-                    _sectionLabel('Did you know?'),
+                  // ── Dietary tags (первым) ────────────────────────
+                  if (dish.dietaryTags.isNotEmpty) ...[
+                    _sectionLabel('Dietary info'),
                     const SizedBox(height: 12),
-                    ...dish.funFacts.asMap().entries.map(
-                          (e) => _factCard(e.key, e.value),
-                        ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: dish.dietaryTags
+                          .map((tag) => _dietaryChip(tag))
+                          .toList(),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Tags are AI-generated. Always verify allergens with the restaurant.',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                        height: 1.4,
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     _divider(),
                     const SizedBox(height: 20),
                   ],
 
-                  // ── Nutrition ────────────────────────────────────
+                  // ── Nutrition (после dietary) ─────────────────────
                   if (dish.nutrition != null) ...[
                     _sectionLabel('Nutrition (estimated per serving)'),
                     const SizedBox(height: 12),
@@ -185,31 +201,6 @@ class DishScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _divider(),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // ── Dietary tags ──────────────────────────────────
-                  if (dish.dietaryTags.isNotEmpty) ...[
-                    _sectionLabel('Dietary info'),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: dish.dietaryTags
-                          .map((tag) => _dietaryChip(tag))
-                          .toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Tags are AI-generated. Always verify allergens with the restaurant.',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 11,
-                        color: AppColors.textMuted,
-                        height: 1.4,
-                      ),
-                    ),
                   ],
                 ],
               ),

@@ -33,15 +33,12 @@ class DishCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Фото блюда
-          GestureDetector(
-            onTap: dish.imageReady ? () => _openPhoto(context, api.imageUrl(dish.imageUrl!)) : null,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: _buildImage(),
-              ),
+          // Фото блюда — тап по нему тоже открывает страницу блюда
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: _buildImage(),
             ),
           ),
           // Информация
@@ -50,17 +47,18 @@ class DishCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // English name жирно + цена в одну строку
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Expanded(
                       child: Text(
-                        dish.nameOriginal,
+                        dish.nameEnglish.isNotEmpty ? dish.nameEnglish : dish.nameOriginal,
                         style: const TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.deepBeet,
                         ),
                       ),
@@ -81,13 +79,16 @@ class DishCard extends StatelessWidget {
                     ],
                   ],
                 ),
-                if (dish.nameEnglish.isNotEmpty && dish.nameEnglish != dish.nameOriginal) ...[
+                // Original name мелко под English
+                if (dish.nameEnglish.isNotEmpty &&
+                    dish.nameEnglish != dish.nameOriginal &&
+                    dish.nameOriginal.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
-                    dish.nameEnglish,
+                    dish.nameOriginal,
                     style: const TextStyle(
                       fontFamily: 'Outfit',
-                      fontSize: 13,
+                      fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: AppColors.textSecondary,
                     ),

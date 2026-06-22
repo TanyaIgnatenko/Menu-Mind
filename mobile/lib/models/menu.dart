@@ -30,7 +30,7 @@ class Dish {
   final String imageStatus; // pending, generating, ready, failed
   final String? imageUrl;
   final List<String> dietaryTags;
-  final List<String> funFacts;
+  final String about;
   final Nutrition? nutrition;
 
   const Dish({
@@ -44,7 +44,7 @@ class Dish {
     required this.imageStatus,
     this.imageUrl,
     this.dietaryTags = const [],
-    this.funFacts = const [],
+    this.about = '',
     this.nutrition,
   });
 
@@ -59,7 +59,7 @@ class Dish {
         imageStatus: json['image_status'] ?? 'pending',
         imageUrl: json['image_url'],
         dietaryTags: List<String>.from(json['dietary_tags'] ?? []),
-        funFacts: List<String>.from(json['fun_facts'] ?? []),
+        about: json['about'] ?? '',
         nutrition: json['nutrition'] != null
             ? Nutrition.fromJson(json['nutrition'] as Map<String, dynamic>)
             : null,
