@@ -1,5 +1,12 @@
 export type ImageStatus = "pending" | "generating" | "ready" | "failed";
 
+/**
+ * Menu-level extraction status. The backend returns a placeholder immediately
+ * with status "extracting" and fills in dishes in the background, so clients
+ * must poll GET /menus/{id} until status becomes "ready" (or "failed").
+ */
+export type MenuStatus = "extracting" | "ready" | "failed";
+
 export interface Nutrition {
   calories: number;
   protein_g: number;
@@ -32,6 +39,8 @@ export interface Menu {
   cuisine_type: string | null;
   dishes: Dish[];
   created_at: string;
+  /** Absent on older backends — treat as "ready". */
+  status?: MenuStatus;
 }
 
 export interface ApiError {
