@@ -140,7 +140,7 @@ a:focus-visible,button:focus-visible{
   max-width:440px;margin-bottom:30px;
 }
 
-.hero__cta{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.hero__cta{display:flex;align-items:center;gap:22px;flex-wrap:wrap;scroll-margin-top:80px}
 
 /* ---------- Download button (Android) ---------- */
 .download-btn{

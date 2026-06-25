@@ -27,6 +27,21 @@
     });
   });
 
+  // Nav "Get the app": on the mobile layout (≤860px) scroll to the download
+  // block; on desktop let the native <a download> trigger the APK download.
+  var mobileMQ = window.matchMedia('(max-width: 860px)');
+  document.querySelectorAll('.js-get-app').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      if (!mobileMQ.matches) return; // desktop → native download proceeds
+      var target = document.getElementById('get-app');
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+    });
+  });
+
   // Download buttons: let the native <a download> do the work, but if a
   // non-Android visitor clicks, surface the hint instead of nagging.
   // (The href is the real download target — see TODO in the HTML.)

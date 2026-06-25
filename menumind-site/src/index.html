@@ -49,7 +49,9 @@
       <a href="#features">How it works</a>
       <!-- TODO: real support destination -->
       <a href="mailto:support@menumind.app">Support</a>
-      <a class="btn-pill" href="#get-app">Get the app</a>
+      <!-- Desktop: downloads the APK directly. Mobile (≤860px): main.js
+           intercepts and smooth-scrolls to the full-width download button. -->
+      <a class="btn-pill js-get-app" href="/MenuMind.apk" download aria-label="Get the MenuMind Android app">Get the app</a>
     </nav>
   </header>
 
