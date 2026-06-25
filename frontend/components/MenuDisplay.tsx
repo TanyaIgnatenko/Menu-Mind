@@ -27,7 +27,6 @@ const FILTERS: FilterDef[] = [
   { id: "gluten_free", label: "Gluten-free", emoji: "🌾", tags: ["contains_gluten"], mode: "exclude" },
   { id: "spicy", label: "Spicy", emoji: "🌶️", tags: ["spicy"], mode: "require" },
   { id: "sweet", label: "Sweet", emoji: "🍯", tags: ["sweet"], mode: "require" },
-  { id: "healthy", label: "Healthy", emoji: "💪", tags: ["healthy", "low_calorie"], mode: "require" },
 ];
 
 function matches(dish: Dish, f: FilterDef): boolean {
