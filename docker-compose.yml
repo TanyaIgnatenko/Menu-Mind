@@ -22,6 +22,9 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-your_gemini_key_here}
       FAL_API_KEY: ${FAL_API_KEY:-}
       DEBUG: "true"
+      # Local dev runs in a container, so backend/.env (which has this) is not
+      # loaded — disable upload rate limiting here too.
+      RATE_LIMIT_ENABLED: "false"
     ports:
       - "8000:8000"
     depends_on:
