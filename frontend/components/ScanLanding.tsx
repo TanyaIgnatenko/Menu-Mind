@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { Camera, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -167,11 +167,11 @@ export function ScanLanding({ onUploaded }: Props) {
         {/* Actions */}
         <div className="mt-5 hidden w-full items-center justify-center gap-3 nav:flex">
           <Button onClick={() => fileInputRef.current?.click()} size="lg" className="gap-2">
-            <Upload className="h-5 w-5" aria-hidden="true" />
+            <span aria-hidden="true" className="text-base">📁</span>
             Choose file
           </Button>
           <Button variant="outline" size="lg" className="gap-2" onClick={() => setShowWebcam(true)}>
-            <Camera className="h-5 w-5" aria-hidden="true" />
+            <span aria-hidden="true" className="text-base">📷</span>
             Use webcam
           </Button>
         </div>
@@ -180,7 +180,7 @@ export function ScanLanding({ onUploaded }: Props) {
           size="lg"
           className="mt-5 w-full gap-2 nav:hidden"
         >
-          <Camera className="h-5 w-5" aria-hidden="true" />
+          <span aria-hidden="true" className="text-base">📷</span>
           Take a Photo
         </Button>
 
