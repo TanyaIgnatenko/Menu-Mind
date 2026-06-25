@@ -49,3 +49,8 @@ test_seledka.png
 # Локальные деплой-скрипты
 redeploy.ps1
 reset-local.ps1
+
+# Design handoff packages (reference material, not part of the app)
+design_handoff_menumind/
+design_handoff_web/
+MenuMind mobile app UI design.zip
