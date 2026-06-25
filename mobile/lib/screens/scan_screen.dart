@@ -2,11 +2,16 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../models/menu.dart';
 import '../services/api_service.dart';
 import '../services/history_service.dart';
+import '../services/menu_photo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/wordmark.dart';
+import '../widgets/stripe_placeholder.dart';
+import '../widgets/camera_glyph.dart';
+import 'loading_view.dart';
 import 'menu_screen.dart';
 
 class ScanScreen extends StatefulWidget {
@@ -16,22 +21,41 @@ class ScanScreen extends StatefulWidget {
   State<ScanScreen> createState() => _ScanScreenState();
 }
 
-class _ScanScreenState extends State<ScanScreen> {
+class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
   final _api = ApiService();
   final _history = HistoryService();
   final _picker = ImagePicker();
-  bool _loading = false;
-  // Текущий индекс фазы загрузки (0-3)
-  int _phaseIndex = 0;
-  Timer? _phaseTimer;
 
-  // Фазы с текстом — меняются каждые 3 секунды
-  static const _phases = [
-    'Reading the menu…',
-    'Translating dishes…',
-    'Generating food photos…',
-    'Almost ready…',
-  ];
+  bool _loading = false;
+  int _stageIndex = 0;
+  int? _dishCount;
+  Timer? _stageTimer;
+
+  HistoryEntry? _recent;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadRecent();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stageTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadRecent();
+  }
+
+  Future<void> _loadRecent() async {
+    final entries = await _history.getHistory();
+    if (mounted) setState(() => _recent = entries.isNotEmpty ? entries.first : null);
+  }
 
   Future<void> _pick(ImageSource source) async {
     final xFile = await _picker.pickImage(source: source, imageQuality: 85);
@@ -42,78 +66,132 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _upload(File file) async {
     setState(() {
       _loading = true;
-      _phaseIndex = 0;
+      _stageIndex = 0;
+      _dishCount = null;
     });
 
-    // Таймер меняет фазы каждые 3 секунды
-    _phaseTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (mounted && _phaseIndex < _phases.length - 1) {
-        setState(() => _phaseIndex++);
-      }
+    // Advance the loader caption through the three stages while we wait.
+    // Advance the caption through the stages slowly so it doesn't outrun the
+    // (deliberately slow) progress bar on the loading screen.
+    _stageTimer = Timer.periodic(const Duration(milliseconds: 5000), (_) {
+      if (mounted && _stageIndex < 3) setState(() => _stageIndex++);
     });
 
     try {
-      final menu = await _api.uploadMenu(file);
-      // Передаём путь к оригинальному фото меню для превью в истории
-      await _history.addToHistory(menu, menuPhotoPath: file.path);
+      // The server returns a placeholder immediately, then extracts the menu
+      // (OCR + translation) in the background. Poll until it's ready — the
+      // loading screen stays up meanwhile — so the slow work can't hit the
+      // gateway timeout (504).
+      Menu menu = await _api.uploadMenu(file);
+      final deadline = DateTime.now().add(const Duration(minutes: 4));
+      while (menu.extractionPending) {
+        if (DateTime.now().isAfter(deadline)) {
+          throw ApiException('Processing took too long. Please try again.');
+        }
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        try {
+          menu = await _api.getMenu(menu.id);
+        } catch (_) {
+          // Transient poll error — keep retrying until the deadline.
+        }
+      }
+      if (menu.extractionFailed) {
+        throw ApiException('Could not read the menu. Try a clearer photo.');
+      }
+
+      // image_picker returns a cache file the OS can purge — copy it into the
+      // app's documents dir (stored by filename) so the History thumbnail survives.
+      final photoName = await MenuPhotoStore.save(file, menu.id);
+      await _history.addToHistory(menu, menuPhotoPath: photoName);
+      _stageTimer?.cancel();
       if (!mounted) return;
-      await showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        useSafeArea: true,
-        builder: (_) => DraggableScrollableSheet(
-          initialChildSize: 0.95,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (_, __) => ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: MenuScreen(menu: menu, api: _api, history: _history),
-          ),
-        ),
+      // Hide the loader before navigating so the Scan screen is ready underneath.
+      setState(() {
+        _dishCount = menu.dishes.length;
+        _loading = false;
+      });
+      await _openMenu(menu);
+      await _loadRecent();
+    } catch (e) {
+      _stageTimer?.cancel();
+      if (!mounted) return;
+      setState(() => _loading = false);
+      final msg = e is ApiException
+          ? e.message
+          : 'Could not process the menu. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: AppColors.primaryDeep),
       );
+    } finally {
+      _stageTimer?.cancel();
+    }
+  }
+
+  Future<void> _openMenu(Menu menu) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MenuScreen(menu: menu, api: _api, history: _history),
+      ),
+    );
+  }
+
+  Future<void> _openRecent() async {
+    final entry = _recent;
+    if (entry == null) return;
+    try {
+      final menu = await _api.getMenu(entry.id);
+      if (!mounted) return;
+      await _openMenu(menu);
+      await _loadRecent();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Upload failed: $e'),
-          backgroundColor: AppColors.beet,
-        ),
+        SnackBar(content: Text('Failed to load: $e'), backgroundColor: AppColors.primaryDeep),
       );
-    } finally {
-      _phaseTimer?.cancel();
-      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
-  void dispose() {
-    _phaseTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_loading) return _LoadingView(phaseIndex: _phaseIndex);
+    if (_loading) return LoadingView(stageIndex: _stageIndex, dishCount: _dishCount);
+
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: AppColors.canvas,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 32),
               const Wordmark(),
-              const Spacer(),
-              _uploadZone(),
-              const SizedBox(height: 24),
-              _button(Icons.photo_library_outlined, 'Choose from gallery',
-                  () => _pick(ImageSource.gallery)),
-              const SizedBox(height: 12),
-              _button(Icons.camera_alt_outlined, 'Take a photo',
-                  () => _pick(ImageSource.camera)),
-              const Spacer(),
+              const SizedBox(height: 20),
+              _languagePill(),
+              const SizedBox(height: 20),
+              const Text('Read any\nmenu.', style: AppText.hero),
+              const SizedBox(height: 14),
+              const Text(
+                'Photograph any restaurant menu and get every dish translated '
+                'instantly — with AI-generated photos and nutrition info.',
+                style: AppText.body,
+              ),
+              const SizedBox(height: 26),
+              _PrimaryButton(
+                icon: const CameraGlyph(size: 20),
+                label: 'Take a Photo',
+                onTap: () => _pick(ImageSource.camera),
+              ),
+              const SizedBox(height: 10),
+              _SecondaryButton(
+                icon: Icons.image_outlined,
+                label: 'Choose from Gallery',
+                onTap: () => _pick(ImageSource.gallery),
+              ),
+              if (_recent != null) ...[
+                const SizedBox(height: 20),
+                _RecentCard(entry: _recent!, onTap: _openRecent),
+              ],
             ],
           ),
         ),
@@ -121,247 +199,181 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 
-  Widget _uploadZone() {
-    return GestureDetector(
-      onTap: () => _pick(ImageSource.gallery),
-      child: Container(
-        width: double.infinity,
-        height: 220,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.beet.withOpacity(0.3), width: 1.5),
-          boxShadow: [
-            BoxShadow(color: AppColors.cardShadow, blurRadius: 12, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDDE5CE),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.camera_alt_outlined, color: AppColors.dill, size: 32),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Upload a photo of any menu',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.deepBeet,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Works in any language',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
+  Widget _languagePill() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTintBg,
+        borderRadius: BorderRadius.circular(999),
       ),
-    );
-  }
-
-  Widget _button(IconData icon, String label, VoidCallback onTap) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 20),
-        label: Text(label),
-      ),
-    );
-  }
-}
-
-// ── Экран загрузки ────────────────────────────────────────────────────────────
-
-class _LoadingView extends StatelessWidget {
-  final int phaseIndex;
-
-  static const _phases = [
-    'Reading the menu…',
-    'Translating dishes…',
-    'Generating food photos…',
-    'Almost ready…',
-  ];
-
-  const _LoadingView({required this.phaseIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.cream,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const _BouncingDots(),
-            const SizedBox(height: 32),
-            // Текст меняется с анимацией
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              transitionBuilder: (child, anim) => FadeTransition(
-                opacity: anim,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.15),
-                    end: Offset.zero,
-                  ).animate(anim),
-                  child: child,
-                ),
-              ),
-              child: Text(
-                _phases[phaseIndex.clamp(0, _phases.length - 1)],
-                key: ValueKey(phaseIndex),
-                style: const TextStyle(
-                  fontFamily: 'Outfit',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.deepBeet,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Прогресс-индикатор — четыре точки
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(4, (i) {
-                final isActive = i <= phaseIndex;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: isActive ? 20 : 8,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? AppColors.beet
-                        : AppColors.beet.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Три прыгающих точки (три цвета как во фронтенде) ─────────────────────────
-
-class _BouncingDots extends StatefulWidget {
-  const _BouncingDots();
-
-  @override
-  State<_BouncingDots> createState() => _BouncingDotsState();
-}
-
-class _BouncingDotsState extends State<_BouncingDots>
-    with TickerProviderStateMixin {
-  static const _dotColors = [
-    Color(0xFF8E2A4C),
-    Color(0xFF5A1C32),
-    Color(0xFFDDE5CE),
-  ];
-  static const _delays = [0, 150, 300];
-
-  late List<AnimationController> _controllers;
-  late List<Animation<double>> _translateAnims;
-  late List<Animation<double>> _opacityAnims;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controllers = List.generate(
-      3,
-      (_) => AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1200),
-      ),
-    );
-
-    _translateAnims = _controllers.map((c) {
-      return TweenSequence<double>([
-        TweenSequenceItem(
-          tween: Tween(begin: 0.0, end: -6.0)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 40,
-        ),
-        TweenSequenceItem(
-          tween: Tween(begin: -6.0, end: 0.0)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 40,
-        ),
-        TweenSequenceItem(tween: ConstantTween(0.0), weight: 20),
-      ]).animate(c);
-    }).toList();
-
-    _opacityAnims = _controllers.map((c) {
-      return TweenSequence<double>([
-        TweenSequenceItem(
-          tween: Tween(begin: 0.6, end: 1.0)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 40,
-        ),
-        TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 0.6)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 40,
-        ),
-        TweenSequenceItem(tween: ConstantTween(0.6), weight: 20),
-      ]).animate(c);
-    }).toList();
-
-    for (int i = 0; i < 3; i++) {
-      Future.delayed(Duration(milliseconds: _delays[i]), () {
-        if (mounted) _controllers[i].repeat();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    for (final c in _controllers) c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (i) {
-        return AnimatedBuilder(
-          animation: _controllers[i],
-          builder: (_, __) => Transform.translate(
-            offset: Offset(0, _translateAnims[i].value),
-            child: Opacity(
-              opacity: _opacityAnims[i].value,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: _dotColors[i],
-                  shape: BoxShape.circle,
-                ),
-              ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('🌍', style: TextStyle(fontSize: 14)),
+          SizedBox(width: 6),
+          Text(
+            '40+ languages supported',
+            style: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
             ),
           ),
-        );
-      }),
+        ],
+      ),
     );
+  }
+}
+
+// ── Buttons ────────────────────────────────────────────────────────────────────
+
+class _PrimaryButton extends StatelessWidget {
+  final Widget icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PrimaryButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: Material(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              icon,
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: AppTheme.fontFamily,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _SecondaryButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border, width: 2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 20, color: AppColors.body),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontFamily: AppTheme.fontFamily,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.body,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Recent scan card ─────────────────────────────────────────────────────────
+
+class _RecentCard extends StatelessWidget {
+  final HistoryEntry entry;
+  final VoidCallback onTap;
+  const _RecentCard({required this.entry, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(width: 48, height: 48, child: _thumb()),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('RECENT SCAN', style: AppText.eyebrow),
+                    const SizedBox(height: 3),
+                    Text(
+                      entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.cardTitle,
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      '${entry.dishCount} dishes · ${timeago.format(entry.savedAt)}',
+                      style: AppText.meta,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _thumb() {
+    final file = MenuPhotoStore.resolve(entry.menuPhotoPath);
+    if (file != null && file.existsSync()) {
+      return Image.file(file, fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const StripePlaceholder.warm());
+    }
+    return const StripePlaceholder.warm();
   }
 }

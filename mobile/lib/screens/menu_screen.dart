@@ -30,11 +30,7 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen> {
   late Menu _menu;
   Timer? _timer;
-  Set<String> _activeFilters = {};
-
-  // Ключи для скролла к категориям
-  final Map<String, GlobalKey> _categoryKeys = {};
-  final _scrollController = ScrollController();
+  final Set<String> _activeFilters = {};
 
   @override
   void initState() {
@@ -59,7 +55,6 @@ class _MenuScreenState extends State<MenuScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -74,129 +69,166 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  void _scrollToCategory(String category) async {
-    final key = _categoryKeys[category];
-    if (key?.currentContext == null) return;
-    await Scrollable.ensureVisible(
-      key!.currentContext!,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-    );
+  String get _subtitle {
+    final parts = <String>['${_menu.dishes.length} dishes'];
+    if (_menu.cuisineType != null && _menu.cuisineType!.isNotEmpty) {
+      parts.add(_menu.cuisineType!);
+    }
+    return parts.join(' · ');
   }
 
   @override
   Widget build(BuildContext context) {
     final filtered = filterDishes(_menu.dishes, _activeFilters);
 
-    // Группируем по категориям
-    final Map<String, List<Dish>> byCategory = {};
+    // Group by category, preserving first-seen order.
+    final byCategory = <String, List<Dish>>{};
     for (final dish in filtered) {
-      final cat = dish.categoryEnglish.isNotEmpty
-          ? dish.categoryEnglish
-          : dish.category;
-      byCategory.putIfAbsent(cat, () => []).add(dish);
+      final cat = dish.categoryEnglish.isNotEmpty ? dish.categoryEnglish : dish.category;
+      byCategory.putIfAbsent(cat.isEmpty ? 'Menu' : cat, () => []).add(dish);
     }
     final categories = byCategory.keys.toList();
 
-    // Регистрируем ключи для новых категорий
-    for (final cat in categories) {
-      _categoryKeys.putIfAbsent(cat, () => GlobalKey());
-    }
-
     return Scaffold(
-      backgroundColor: AppColors.cream,
-      appBar: AppBar(
-        title: Text(_menu.restaurantName ?? _menu.autoName),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: _showShareSheet,
-            color: AppColors.beet,
-          ),
-        ],
-      ),
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          // Dietary filters
-          SliverToBoxAdapter(
-            child: DietaryFilters(
+      backgroundColor: AppColors.canvas,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _header(),
+            const SizedBox(height: 10),
+            DietaryFilters(
               dishes: _menu.dishes,
               active: _activeFilters,
               onToggle: (id) => setState(() {
-                if (_activeFilters.contains(id)) {
-                  _activeFilters.remove(id);
-                } else {
-                  _activeFilters.add(id);
-                }
+                _activeFilters.contains(id) ? _activeFilters.remove(id) : _activeFilters.add(id);
               }),
-              shownCount: filtered.length,
             ),
-          ),
-
-          // Category navigation chips
-          if (categories.length > 1)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 48,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 4),
-                  itemCount: categories.length,
-                  itemBuilder: (_, i) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ActionChip(
-                      label: Text(categories[i]),
-                      backgroundColor: AppColors.white,
-                      side: const BorderSide(
-                          color: AppColors.chipInactiveBorder),
-                      labelStyle: const TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 13,
-                        color: AppColors.deepBeet,
+            const SizedBox(height: 12),
+            Expanded(
+              child: Stack(
+                children: [
+                  ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                    children: [
+                      for (final cat in categories) ...[
+                        _categoryHeader(cat, byCategory[cat]!.length),
+                        for (final dish in byCategory[cat]!)
+                          DishCard(dish: dish, api: widget.api),
+                        const SizedBox(height: 8),
+                      ],
+                      if (categories.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 80),
+                          child: Center(
+                            child: Text('No dishes match these filters.',
+                                style: AppText.body),
+                          ),
+                        ),
+                    ],
+                  ),
+                  // Bottom fade.
+                  IgnorePointer(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [AppColors.canvas, AppColors.canvas.withOpacity(0)],
+                          ),
+                        ),
                       ),
-                      onPressed: () => _scrollToCategory(categories[i]),
                     ),
                   ),
-                ),
-              ),
-            ),
-
-          // Блюда по категориям
-          for (final cat in categories) ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                key: _categoryKeys[cat],
-                padding:
-                    const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                child: Text(
-                  cat,
-                  style: const TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.deepBeet,
-                  ),
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) => DishCard(
-                    dish: byCategory[cat]![i],
-                    api: widget.api,
-                  ),
-                  childCount: byCategory[cat]!.length,
-                ),
+                ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
 
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+  Widget _header() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+      child: Row(
+        children: [
+          _IconTile(icon: Icons.arrow_back, onTap: () => Navigator.maybePop(context)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _menu.autoName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.header,
+                ),
+                Text(_subtitle, style: AppText.meta),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          _IconTile(icon: Icons.ios_share_rounded, onTap: _showShareSheet),
         ],
+      ),
+    );
+  }
+
+  Widget _categoryHeader(String name, int count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 12, 4, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            name,
+            style: const TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
+          ),
+          Text(
+            '$count ${count == 1 ? 'dish' : 'dishes'}',
+            style: const TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.muted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 38px neutral icon button used in headers.
+class _IconTile extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _IconTile({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.fillWarm,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Icon(icon, size: 18, color: AppColors.body),
+        ),
       ),
     );
   }
@@ -227,153 +259,100 @@ class _ShareSheetState extends State<_ShareSheet> {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.canvas,
+        borderRadius: BorderRadius.circular(24),
       ),
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Заголовок
           Row(
             children: [
               const Expanded(
-                child: Text(
-                  'Share this menu',
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.deepBeet,
-                  ),
-                ),
+                child: Text('Share this menu', style: AppText.header),
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                icon: const Icon(Icons.close, color: AppColors.body),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
           ),
-          const Text(
-            'Scan the QR code or copy the link.',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          const Text('Scan the QR code or copy the link.', style: AppText.bodySmall),
           const SizedBox(height: 20),
-
-          // QR код
           Center(
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFFDDE5CE),
-                  width: 2,
-                ),
+                border: Border.all(color: AppColors.border, width: 2),
               ),
               child: QrImageView(
                 data: widget.url,
                 size: 200,
                 eyeStyle: const QrEyeStyle(
                   eyeShape: QrEyeShape.square,
-                  color: AppColors.deepBeet,
+                  color: AppColors.ink,
                 ),
                 dataModuleStyle: const QrDataModuleStyle(
                   dataModuleShape: QrDataModuleShape.square,
-                  color: AppColors.deepBeet,
+                  color: AppColors.ink,
                 ),
-                backgroundColor: AppColors.white,
+                backgroundColor: AppColors.surface,
               ),
             ),
           ),
           const SizedBox(height: 20),
-
-          // Ссылка + кнопка копирования
           Row(
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                        color: AppColors.chipInactiveBorder),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: Text(
                     widget.url,
-                    style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: AppText.meta,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: _copied
-                    ? _chipButton(
-                        key: const ValueKey('copied'),
-                        icon: Icons.check,
-                        label: 'Copied',
-                        onTap: _copy,
-                      )
-                    : _chipButton(
-                        key: const ValueKey('copy'),
-                        icon: Icons.copy_outlined,
-                        label: 'Copy',
-                        onTap: _copy,
+              GestureDetector(
+                onTap: _copy,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryTintBg,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_copied ? Icons.check : Icons.copy_outlined,
+                          size: 14, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        _copied ? 'Copied' : 'Copy',
+                        style: const TextStyle(
+                          fontFamily: AppTheme.fontFamily,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
                       ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _chipButton({
-    required Key key,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      key: key,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: AppColors.chipInactiveBorder),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: AppColors.beet),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.beet,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
