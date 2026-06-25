@@ -15,18 +15,19 @@ type FilterMode = "require" | "exclude";
 interface FilterDef {
   id: string;
   label: string;
+  emoji: string;
   tags: string[];
   mode: FilterMode;
 }
 
-// The six dietary chips from the spec's filter bar.
+// The six dietary chips from the spec's filter bar (with the spec emojis).
 const FILTERS: FilterDef[] = [
-  { id: "vegetarian", label: "Vegetarian", tags: ["vegetarian"], mode: "require" },
-  { id: "vegan", label: "Vegan", tags: ["vegan"], mode: "require" },
-  { id: "gluten_free", label: "Gluten-free", tags: ["contains_gluten"], mode: "exclude" },
-  { id: "spicy", label: "Spicy", tags: ["spicy"], mode: "require" },
-  { id: "sweet", label: "Sweet", tags: ["sweet"], mode: "require" },
-  { id: "healthy", label: "Healthy", tags: ["healthy", "low_calorie"], mode: "require" },
+  { id: "vegetarian", label: "Vegetarian", emoji: "🥗", tags: ["vegetarian"], mode: "require" },
+  { id: "vegan", label: "Vegan", emoji: "🌱", tags: ["vegan"], mode: "require" },
+  { id: "gluten_free", label: "Gluten-free", emoji: "🌾", tags: ["contains_gluten"], mode: "exclude" },
+  { id: "spicy", label: "Spicy", emoji: "🌶️", tags: ["spicy"], mode: "require" },
+  { id: "sweet", label: "Sweet", emoji: "🍯", tags: ["sweet"], mode: "require" },
+  { id: "healthy", label: "Healthy", emoji: "💪", tags: ["healthy", "low_calorie"], mode: "require" },
 ];
 
 function matches(dish: Dish, f: FilterDef): boolean {
@@ -113,7 +114,7 @@ export function MenuDisplay({ menu }: Props) {
                     : "border-border bg-surface text-ink hover:border-success/60"
                 }`}
               >
-                {f.label}
+                <span aria-hidden="true">{f.emoji}</span> {f.label}
               </button>
             );
           })}

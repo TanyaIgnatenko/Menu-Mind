@@ -28,7 +28,9 @@
     --secondary: 153 63% 42%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 32 39% 94%;
+    /* #B5A090 — tertiary text (original-language subtitles, muted icons).
+       `muted` is text per the Hot Dish spec, not a background (bg-muted unused). */
+    --muted: 26 20% 64%;
     --muted-foreground: 28 16% 41%;
 
     --accent: 18 100% 97%;

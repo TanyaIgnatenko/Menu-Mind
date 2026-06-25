@@ -127,7 +127,10 @@ export function DishDetailContent({
         )}
 
         {(dish.description_english || dish.description_original) && (
-          <div className="mt-4 space-y-1">
+          <div className="mt-4 space-y-1.5">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-2">
+              About this dish
+            </h3>
             {dish.description_english && (
               <p className="text-sm leading-relaxed text-body">
                 {dish.description_english}
