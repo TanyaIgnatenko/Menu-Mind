@@ -1,0 +1,332 @@
+/* ============================================================
+   MenuMind — install / download landing page
+   Design tokens map 1:1 to design_handoff_android/README.md
+   ============================================================ */
+
+/* ---------- Self-hosted Plus Jakarta Sans ---------- */
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/assets/fonts/plus-jakarta-sans-400.woff2') format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:500;font-display:swap;src:url('/assets/fonts/plus-jakarta-sans-500.woff2') format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:600;font-display:swap;src:url('/assets/fonts/plus-jakarta-sans-600.woff2') format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:700;font-display:swap;src:url('/assets/fonts/plus-jakarta-sans-700.woff2') format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:800;font-display:swap;src:url('/assets/fonts/plus-jakarta-sans-800.woff2') format('woff2')}
+
+:root{
+  /* Brand */
+  --primary:#F05A28;
+  --primary-deep:#C03010;
+  --primary-peach:#FFD098;
+  --primary-tint:#FFF3EE;
+
+  /* Ink / surfaces */
+  --ink:#1A1008;
+  --ink-cta:#0E0D0B;     /* download button bg */
+  --ink-cta-2:#0D0C09;   /* footer + phone bezel */
+  --body:#7A6858;
+  --muted:#B5A090;
+  --muted-2:#9A8878;
+  --canvas:#FFFBF7;
+  --canvas-alt:#FAF5EF;
+  --surface:#FFFFFF;
+  --border:#EDE3D8;
+  --android-green:#3DDC84;
+
+  /* Semantic (phone mockup) */
+  --success:#27AE72;     --success-bg:#EDFBF4;
+  --caution:#D4870A;     --caution-bg:#FFF8EC;
+  --allergen:#E5332A;    --allergen-bg:#FFF0EF;
+  --category:#7B5EA7;    --category-bg:#F2EEFB;
+
+  /* Radii */
+  --r-card:16px;
+  --r-btn:11px;
+  --r-pill:999px;
+
+  /* Shadows */
+  --shadow-card:0 6px 20px rgba(0,0,0,.06);
+  --shadow-phone:0 30px 70px rgba(0,0,0,.4);
+  --shadow-btn:0 10px 30px rgba(240,90,40,.18);
+
+  --font:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+
+/* ---------- Reset ---------- */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:var(--font);
+  color:var(--ink);
+  background:var(--canvas);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,p,dl,dd,dt{margin:0}
+dt{font-weight:inherit}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+
+/* Accessible focus ring */
+a:focus-visible,button:focus-visible{
+  outline:3px solid var(--primary);
+  outline-offset:3px;
+  border-radius:6px;
+}
+
+.skip-link{
+  position:absolute;left:-999px;top:0;z-index:100;
+  background:var(--ink);color:#fff;padding:10px 16px;border-radius:0 0 10px 0;font-weight:700;
+}
+.skip-link:focus{left:0}
+
+/* ============================================================
+   TOP NAV
+   ============================================================ */
+.nav{
+  height:68px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 44px;
+  border-bottom:1px solid var(--border);
+  background:var(--canvas);
+  position:sticky;top:0;z-index:40;
+}
+.nav__brand{display:flex;align-items:center;gap:10px}
+.nav__icon{width:34px;height:34px;border-radius:10px;object-fit:cover}
+.nav__wordmark{font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.nav__links{display:flex;align-items:center;gap:28px}
+.nav__links a:not(.btn-pill){font-size:14px;font-weight:600;color:var(--body);transition:color .15s}
+.nav__links a:not(.btn-pill):hover{color:var(--primary)}
+
+.btn-pill{
+  height:40px;padding:0 18px;
+  background:var(--primary);color:#fff;
+  border-radius:12px;
+  display:inline-flex;align-items:center;
+  font-size:14px;font-weight:700;
+  transition:background .15s,transform .15s;
+}
+.btn-pill:hover{background:#e04e1f;transform:translateY(-1px)}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  display:flex;align-items:center;gap:56px;
+  padding:56px 44px 48px;
+  max-width:1180px;margin:0 auto;
+}
+.hero__copy{flex:1;min-width:0}
+
+.pill{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--primary-tint);
+  padding:7px 15px;border-radius:var(--r-pill);
+  margin-bottom:22px;
+  font-size:12px;font-weight:700;color:var(--primary);
+}
+.pill span:first-child{font-size:13px}
+
+.hero__title{
+  font-size:52px;font-weight:800;letter-spacing:-.04em;line-height:1.04;
+  color:var(--ink);margin-bottom:16px;
+}
+.hero__sub{
+  font-size:17px;color:var(--body);line-height:1.6;
+  max-width:440px;margin-bottom:30px;
+}
+
+.hero__cta{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+
+/* ---------- Download button (Android) ---------- */
+.download-btn{
+  display:inline-flex;align-items:center;gap:13px;
+  background:var(--ink-cta);
+  border-radius:var(--r-btn);
+  padding:11px 21px;
+  min-height:48px;
+  transition:transform .15s,box-shadow .15s;
+}
+.download-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow-btn)}
+.download-btn__bot{flex:none}
+.download-btn__label{display:flex;flex-direction:column;text-align:left;line-height:1.1}
+.download-btn__eyebrow{font-size:11px;font-weight:500;letter-spacing:.04em;color:rgba(255,255,255,.85)}
+.download-btn__main{font-size:19px;font-weight:700;letter-spacing:-.01em;color:#fff}
+
+/* ---------- QR (desktop only) ---------- */
+.qr{display:flex;align-items:center;gap:12px}
+.qr__code{padding:8px;background:#fff;border-radius:12px;border:1px solid var(--border);line-height:0}
+.qr__code svg{display:block;width:74px;height:74px}
+.qr__title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.qr__hint{font-size:12px;color:var(--muted);line-height:1.4}
+
+/* ---------- Stats ---------- */
+.stats{display:flex;align-items:center;gap:22px;margin-top:28px}
+.stats__item{display:flex;flex-direction:column}
+.stats__num{font-size:18px;font-weight:800;color:var(--ink)}
+.stats__label{font-size:11px;color:var(--muted);font-weight:500}
+.stats__div{width:1px;align-self:stretch;background:var(--border)}
+
+/* ============================================================
+   PHONE MOCKUP  (built at intrinsic 300px width, scaled to fit)
+   ============================================================ */
+.hero__phone{flex:none;position:relative}
+.phone-glow{
+  position:absolute;inset:-30px;
+  background:radial-gradient(ellipse 70% 70% at 50% 40%,rgba(240,90,40,.12),transparent 70%);
+  pointer-events:none;
+}
+.phone-stage{
+  --ps:.83;
+  position:relative;
+  width:calc(300px * var(--ps));
+  height:calc(618px * var(--ps));
+}
+.phone{
+  position:absolute;top:0;left:0;
+  width:300px;height:618px;
+  transform:scale(var(--ps));transform-origin:top left;
+  background:var(--ink-cta-2);
+  border-radius:42px;padding:7px;
+  box-shadow:var(--shadow-phone);
+}
+.phone__screen{
+  width:100%;height:100%;
+  background:var(--canvas);
+  border-radius:36px;overflow:hidden;position:relative;
+}
+.phone__hero-img{
+  position:absolute;top:0;left:0;width:100%;height:247px;object-fit:cover;
+}
+.phone__notch{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  width:86px;height:24px;background:#000;border-radius:14px;z-index:5;
+}
+.phone__back{
+  position:absolute;top:46px;left:16px;width:32px;height:32px;
+  background:#fff;border-radius:11px;box-shadow:0 2px 10px rgba(0,0,0,.16);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--ink);z-index:6;
+}
+.phone__sheet{
+  position:absolute;top:229px;left:0;right:0;bottom:0;
+  background:#fff;border-radius:24px 24px 0 0;padding:18px 20px;
+}
+.phone__row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.phone__price{font-size:22px;font-weight:800;color:var(--primary);letter-spacing:-.03em}
+.phone__dish{font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.025em;margin-bottom:3px}
+.phone__orig{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:12px}
+.phone__desc{font-size:12px;color:var(--body);line-height:1.55;margin-bottom:14px}
+.phone__allergens{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.phone__nutrition{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+
+.tag{border-radius:var(--r-pill);font-weight:700;white-space:nowrap}
+.tag--category{background:var(--category-bg);color:var(--category);font-size:10px;padding:4px 11px}
+.tag--allergen{background:var(--allergen-bg);color:var(--allergen);font-size:10px;font-weight:600;padding:4px 9px}
+
+.nstat{border-radius:12px;padding:9px 4px;text-align:center}
+.nstat__n{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.nstat__l{font-size:8px;font-weight:700;text-transform:uppercase;margin-top:2px}
+.nstat--kcal{background:var(--primary-tint)}    .nstat--kcal .nstat__n,.nstat--kcal .nstat__l{color:var(--primary)}
+.nstat--prot{background:var(--success-bg)}      .nstat--prot .nstat__n,.nstat--prot .nstat__l{color:var(--success)}
+.nstat--carb{background:var(--caution-bg)}      .nstat--carb .nstat__n,.nstat--carb .nstat__l{color:var(--caution)}
+.nstat--fat{background:var(--category-bg)}       .nstat--fat .nstat__n,.nstat--fat .nstat__l{color:var(--category)}
+
+/* ============================================================
+   FEATURE STRIP
+   ============================================================ */
+.features{
+  padding:42px 44px 52px;
+  background:var(--canvas-alt);
+  border-top:1px solid var(--border);
+}
+.eyebrow{
+  font-size:12px;font-weight:700;color:var(--primary);
+  text-transform:uppercase;letter-spacing:.06em;text-align:center;
+  margin-bottom:8px;
+}
+.features__title{
+  font-size:30px;font-weight:800;letter-spacing:-.03em;text-align:center;
+  color:var(--ink);margin-bottom:36px;
+}
+.features__grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:30px;
+  max-width:1180px;margin:0 auto;
+}
+.feature{display:flex;flex-direction:column;gap:8px}
+.feature__icon{
+  width:46px;height:46px;border-radius:14px;background:var(--primary-tint);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.feature__title{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin-top:4px}
+.feature__body{font-size:13px;color:var(--body);line-height:1.55}
+
+/* ============================================================
+   FOOTER CTA
+   ============================================================ */
+.footer{
+  padding:44px;
+  background:var(--ink-cta-2);
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  flex-wrap:wrap;
+}
+.footer__title{font-size:26px;font-weight:800;letter-spacing:-.03em;color:#fff;margin-bottom:6px}
+.footer__sub{font-size:14px;color:rgba(255,255,255,.6)}
+
+/* Non-Android hint */
+.android-hint{
+  background:var(--primary-tint);color:var(--primary);
+  text-align:center;font-size:13px;font-weight:600;
+  padding:12px 22px;
+}
+.android-hint[hidden]{display:none}
+
+/* ============================================================
+   RESPONSIVE  —  breakpoint at 860px (mid of 768–900 window)
+   ============================================================ */
+@media (max-width:860px){
+  /* nav: hide text links, keep brand + Get the app */
+  .nav{padding:0 22px}
+  .nav__links{gap:14px}
+  .nav__links a:not(.btn-pill){display:none}
+
+  /* hero → single column, centered */
+  .hero{
+    flex-direction:column;align-items:center;text-align:center;
+    gap:8px;padding:32px 22px 8px;
+  }
+  .hero__copy{width:100%;display:flex;flex-direction:column;align-items:center}
+  .hero__title{font-size:30px;letter-spacing:-.04em;line-height:1.08}
+  .hero__sub{font-size:14px;line-height:1.55;margin-bottom:22px;max-width:420px}
+
+  .hero__cta{flex-direction:column;align-items:stretch;width:100%;max-width:360px;gap:14px}
+  .download-btn{justify-content:center;width:100%}
+
+  /* hide the QR on mobile — visitor is already on their phone */
+  .qr{display:none}
+
+  .stats{justify-content:center;gap:14px;margin-top:18px}
+
+  /* phone shrinks to a peek */
+  .hero__phone{margin-top:18px;width:calc(300px * var(--peek,.6));overflow:hidden;height:150px}
+  .phone-stage{--ps:.6;margin:0 auto}
+  .phone-glow{display:none}
+
+  /* features stack 1-per-row */
+  .features{padding:26px 22px}
+  .eyebrow{text-align:left}
+  .features__title{font-size:24px;text-align:left;line-height:1.1;margin-bottom:24px}
+  .features__grid{grid-template-columns:1fr;gap:22px}
+
+  /* footer → stacked card */
+  .footer{flex-direction:column;align-items:center;text-align:center;padding:28px 22px;gap:16px}
+  .footer__title{font-size:22px}
+}
+
+@media (max-width:420px){
+  .hero__title{font-size:27px}
+}
