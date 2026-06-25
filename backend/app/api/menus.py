@@ -3,12 +3,23 @@ import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.api.dependencies import get_db
+from app.config import get_settings
 from app.exceptions import InvalidImageError
 from app.schemas.menu import Menu
-from app.services.cache import get_cached_menu, get_menu_by_id, save_menu
+from app.services.cache import (
+    complete_menu_extraction,
+    create_pending_menu,
+    get_cached_menu,
+    get_menu_by_id,
+    mark_menu_failed,
+)
 from app.services.extraction import extract_menu_from_image
 from app.services.image_generation import generate_images_for_menu
 from app.services.preprocessing import compute_image_hash, preprocess_image
@@ -47,25 +58,65 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+async def _extract_and_generate(menu_id: UUID, processed_bytes: bytes) -> None:
+    """Background pipeline for one upload: extract the menu (slow OCR +
+    translation), then generate dish images.
+
+    Runs as a detached asyncio task so the slow work happens AFTER the HTTP
+    response — the request can no longer be killed by the gateway timeout (504).
+    Uses its own DB engine because it runs outside the request scope. The image
+    is already validated + preprocessed by the request handler.
+    """
+    settings = get_settings()
+    engine = create_async_engine(settings.database_url)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    extracted = False
+    try:
+        menu_create = await extract_menu_from_image(processed_bytes)
+        async with session_factory() as session:
+            await complete_menu_extraction(session, menu_id, menu_create)
+        extracted = True
+        logger.info("extraction_complete", menu_id=str(menu_id), dish_count=len(menu_create.dishes))
+    except Exception as e:
+        logger.error(
+            "extraction_failed",
+            menu_id=str(menu_id),
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+        try:
+            async with session_factory() as session:
+                await mark_menu_failed(session, menu_id)
+        except Exception as mark_err:
+            logger.error("extraction_mark_failed_error", menu_id=str(menu_id), error=str(mark_err))
+    finally:
+        await engine.dispose()
+
+    if extracted:
+        # generate_images_for_menu manages its own engine/session.
+        await generate_images_for_menu(menu_id)
+
+
 @router.post("/", response_model=Menu, status_code=201)
 async def create_menu(
     request: Request,
     file: UploadFile,
     db: AsyncSession = Depends(get_db),
 ) -> Menu:
-    """Extract menu from uploaded image, queue image generation in background.
+    """Start menu processing and return a placeholder immediately.
+
+    OCR + translation (slow) and image generation both run as detached asyncio
+    tasks, so the response returns in well under the gateway timeout. The client
+    then polls GET /menus/{id} until `status` becomes 'ready' (or 'failed').
 
     Idempotent by image hash: re-uploading the same image returns the existing
-    menu without re-extracting or re-generating images (and does not count
-    toward rate limits).
+    menu (ready or still extracting) without re-processing, and a previously
+    'failed' attempt is re-extracted.
 
     Rate limits (both bypass-able via RATE_LIMIT_ENABLED=false):
       - 5 unique uploads per IP per day
       - 50 unique uploads globally per day
-
-    Image generation runs as a detached asyncio task — not a FastAPI
-    BackgroundTask — so it can outlive the request lifecycle without being
-    cancelled when the response is sent.
     """
     image_bytes = await file.read()
     if not image_bytes:
@@ -74,28 +125,32 @@ async def create_menu(
     image_hash = compute_image_hash(image_bytes)
 
     # Check cache BEFORE rate limiting — cache hits bypass limits entirely.
+    # A 'failed' record is treated as a miss so the retry re-extracts.
     cached = await get_cached_menu(db, image_hash)
-    if cached is not None:
-        logger.info("cache_hit", image_hash=image_hash, menu_id=str(cached.id))
+    if cached is not None and cached.status != "failed":
+        logger.info(
+            "cache_hit", image_hash=image_hash, menu_id=str(cached.id), status=cached.status
+        )
         check_and_increment(_get_client_ip(request), is_cache_hit=True)
         return cached
 
-    # New unique image — check and increment rate limit counters.
+    # Validate + preprocess synchronously so a bad image fails fast with 400
+    # (raises InvalidImageError) before we create a record or count rate limits.
+    # Only the slow Gemini extraction runs in the background.
+    processed_bytes = preprocess_image(image_bytes)
+
+    # New (or previously-failed) image — check and increment rate limit counters.
     # Raises UploadLimitError (→ HTTP 429) if either limit is exceeded.
     check_and_increment(_get_client_ip(request), is_cache_hit=False)
 
-    processed_bytes = preprocess_image(image_bytes)
-    menu_create = await extract_menu_from_image(processed_bytes)
-
-    menu = await save_menu(db, image_hash, menu_create)
-
-    # Schedule image generation as fire-and-forget on the running event loop.
-    logger.info("scheduling_image_gen", menu_id=str(menu.id))
-    task = asyncio.create_task(generate_images_for_menu(menu.id))
+    # Persist a placeholder and respond immediately; process in the background.
+    pending = await create_pending_menu(db, image_hash)
+    logger.info("scheduling_extraction", menu_id=str(pending.id))
+    task = asyncio.create_task(_extract_and_generate(pending.id, processed_bytes))
     _background_tasks.add(task)
     task.add_done_callback(_on_image_gen_done)
 
-    return menu
+    return pending
 
 
 @router.get("/{menu_id}", response_model=Menu)

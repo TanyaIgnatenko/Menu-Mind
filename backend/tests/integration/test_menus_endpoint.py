@@ -30,17 +30,17 @@ def patched_gemini(mock_gemini_client: Any) -> Any:
 
 
 class TestCreateMenu:
-    async def test_upload_returns_201_and_menu(
+    async def test_upload_returns_201_and_pending_menu(
         self, client: AsyncClient, patched_gemini: Any
     ) -> None:
+        # Extraction now runs in the background, so the POST returns a placeholder
+        # in the 'extracting' state immediately; dishes arrive via polling GET.
         files = {"file": ("menu.jpg", _make_jpeg(), "image/jpeg")}
         response = await client.post("/api/v1/menus/", files=files)
         assert response.status_code == 201
         data = response.json()
         assert "id" in data
-        assert data["source_language"] == "de"
-        assert len(data["dishes"]) == 2
-        assert data["dishes"][0]["name_original"] == "Wiener Schnitzel"
+        assert data["status"] == "extracting"
 
     async def test_same_image_returns_same_id_idempotent(
         self, client: AsyncClient, patched_gemini: Any
@@ -52,16 +52,13 @@ class TestCreateMenu:
         assert first.status_code == 201
         first_id = first.json()["id"]
 
-        # Re-upload same bytes
+        # Re-upload same bytes — cache hit on the existing (pending) record.
         files2 = {"file": ("menu.jpg", image, "image/jpeg")}
         second = await client.post("/api/v1/menus/", files=files2)
         assert second.status_code == 201
         second_id = second.json()["id"]
 
         assert first_id == second_id
-
-        # Gemini should be called only once thanks to cache
-        assert patched_gemini.call_count == 1
 
     async def test_empty_file_returns_400(self, client: AsyncClient) -> None:
         files = {"file": ("empty.jpg", b"", "image/jpeg")}

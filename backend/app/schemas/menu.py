@@ -1,10 +1,15 @@
 """Pydantic schemas for menus."""
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.dish import Dish
+
+# Menu-level extraction status. "extracting" while OCR + translation runs in the
+# background; "ready" once dishes are available; "failed" if extraction errored.
+MenuStatus = Literal["extracting", "ready", "failed"]
 
 
 class MenuCreate(BaseModel):
@@ -28,6 +33,10 @@ class Menu(BaseModel):
     restaurant_name: str | None = None
     cuisine_type: str | None = None
     dishes: list[Dish]
+    status: MenuStatus = Field(
+        default="ready",
+        description="Extraction status. Clients poll while 'extracting'.",
+    )
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
