@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { MenuUpload } from "@/components/MenuUpload";
+import { AppShell } from "@/components/AppShell";
 import { RecentMenus } from "@/components/RecentMenus";
-import { Wordmark } from "@/components/Wordmark";
+import { ScanLanding } from "@/components/ScanLanding";
 import {
   addToHistory,
   getHistory,
@@ -32,22 +32,21 @@ export default function Home() {
     router.push(`/menu/${menu.id}`);
   }
 
-  function handleOpenFromHistory(id: string) {
-    router.push(`/menu/${id}`);
-  }
-
   return (
-    <main className="container mx-auto max-w-2xl px-4 py-8 md:py-12">
-      <Wordmark />
+    <AppShell active="scan">
+      <ScanLanding onUploaded={handleUploaded} />
 
-      <MenuUpload onUploaded={handleUploaded} />
-      <RecentMenus
-        entries={history}
-        openingId={null}
-        onOpen={handleOpenFromHistory}
-        onRemove={(id) => setHistory(removeFromHistory(id))}
-        onRename={(id, name) => setHistory(renameHistoryEntry(id, name))}
-      />
-    </main>
+      {history.length > 0 && (
+        <div className="mx-auto mt-10 max-w-[620px]">
+          <RecentMenus
+            entries={history}
+            openingId={null}
+            onOpen={(id) => router.push(`/menu/${id}`)}
+            onRemove={(id) => setHistory(removeFromHistory(id))}
+            onRename={(id, name) => setHistory(renameHistoryEntry(id, name))}
+          />
+        </div>
+      )}
+    </AppShell>
   );
 }
