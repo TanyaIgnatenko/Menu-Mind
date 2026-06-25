@@ -18,7 +18,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
 const DIST = path.join(ROOT, 'dist');
-const HANDOFF = path.resolve(ROOT, '..', 'design_handoff_android', 'assets');
+// Raw source images live inside the site (committed) so the build is
+// self-contained — it does NOT depend on ../design_handoff_android.
+const SRC_IMG = path.join(SRC, 'assets');
 const FONT_SRC = path.join(ROOT, 'node_modules', '@fontsource', 'plus-jakarta-sans', 'files');
 
 /* ─────────────────────────────────────────────────────────────
@@ -76,23 +78,23 @@ async function buildHtml(qrSvg) {
 
 async function images() {
   // Dish photo: 1024² original → 640² is plenty (displayed ~205px). mozjpeg.
-  await sharp(path.join(HANDOFF, 'carbonara.jpg'))
+  await sharp(path.join(SRC_IMG, 'carbonara.jpg'))
     .resize(640, 640, { fit: 'cover' })
     .jpeg({ quality: 80, mozjpeg: true })
     .toFile(path.join(DIST, 'assets', 'carbonara.jpg'));
 
   // App icon for the nav (kept crisp at 2×: 68px).
-  await sharp(path.join(HANDOFF, 'ic_launcher.png'))
+  await sharp(path.join(SRC_IMG, 'ic_launcher.png'))
     .resize(96, 96)
     .png({ compressionLevel: 9 })
     .toFile(path.join(DIST, 'assets', 'ic_launcher.png'));
 
   // Favicons from the brand icon.
   const fav32 = path.join(DIST, 'assets', 'favicon-32.png');
-  await sharp(path.join(HANDOFF, 'ic_launcher.png')).resize(32, 32).png().toFile(fav32);
-  await sharp(path.join(HANDOFF, 'ic_launcher.png')).resize(180, 180).png()
+  await sharp(path.join(SRC_IMG, 'ic_launcher.png')).resize(32, 32).png().toFile(fav32);
+  await sharp(path.join(SRC_IMG, 'ic_launcher.png')).resize(180, 180).png()
     .toFile(path.join(DIST, 'assets', 'favicon-180.png'));
-  const fav48 = await sharp(path.join(HANDOFF, 'ic_launcher.png')).resize(48, 48).png().toBuffer();
+  const fav48 = await sharp(path.join(SRC_IMG, 'ic_launcher.png')).resize(48, 48).png().toBuffer();
   await fs.writeFile(path.join(DIST, 'favicon.ico'), await pngToIco([fav48]));
 
   log('optimized images + favicons');
@@ -100,7 +102,7 @@ async function images() {
 
 async function ogImage() {
   // 1200×630 social card: brand gradient + icon + wordmark + tagline.
-  const iconBuf = await sharp(path.join(HANDOFF, 'ic_launcher.png'))
+  const iconBuf = await sharp(path.join(SRC_IMG, 'ic_launcher.png'))
     .resize(180, 180).png().toBuffer();
   const iconB64 = iconBuf.toString('base64');
 
