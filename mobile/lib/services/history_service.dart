@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/menu.dart';
+import 'menu_photo_store.dart';
 
 const _key = 'menumind:history';
 const _maxEntries = 20;
@@ -20,22 +21,37 @@ class HistoryService {
 
   /// Сохраняет меню в историю.
   /// [menuPhotoPath] — локальный путь к фото меню которое загрузил пользователь.
+  ///
+  /// Если запись с таким id уже есть (например, повторное сохранение из
+  /// MenuScreen после догенерации фото), сохраняем её путь к фото, кастомное имя
+  /// и время — чтобы не затереть их.
   Future<List<HistoryEntry>> addToHistory(
     Menu menu, {
     String? menuPhotoPath,
   }) async {
     final entries = await getHistory();
+    HistoryEntry? existing;
+    for (final e in entries) {
+      if (e.id == menu.id) {
+        existing = e;
+        break;
+      }
+    }
     final entry = HistoryEntry(
       id: menu.id,
       displayName: menu.autoName,
       dishCount: menu.dishes.length,
-      savedAt: DateTime.now(),
-      menuPhotoPath: menuPhotoPath,
+      savedAt: existing?.savedAt ?? DateTime.now(),
+      menuPhotoPath: menuPhotoPath ?? existing?.menuPhotoPath,
+      customName: existing?.customName,
     );
-    final updated = [entry, ...entries.where((e) => e.id != menu.id)]
-        .take(_maxEntries)
-        .toList();
+    final full = [entry, ...entries.where((e) => e.id != menu.id)];
+    final updated = full.take(_maxEntries).toList();
     await _save(updated);
+    // Delete photos of entries evicted past the cap.
+    for (final e in full.skip(_maxEntries)) {
+      await MenuPhotoStore.delete(e.menuPhotoPath);
+    }
     return updated;
   }
 
@@ -43,6 +59,9 @@ class HistoryService {
     final entries = await getHistory();
     final updated = entries.where((e) => e.id != id).toList();
     await _save(updated);
+    for (final e in entries.where((e) => e.id == id)) {
+      await MenuPhotoStore.delete(e.menuPhotoPath);
+    }
     return updated;
   }
 

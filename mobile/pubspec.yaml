@@ -1,5 +1,5 @@
 name: mobile
-description: "MenuMind — Eat with confidence, anywhere in the world."
+description: "MenuMind — Read any menu. Anywhere."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -19,8 +19,10 @@ dependencies:
   share_plus: ^10.1.4
   qr_flutter: ^4.1.0
   shared_preferences: ^2.3.3
+  path_provider: ^2.1.4
   timeago: ^3.7.0
   cupertino_icons: ^1.0.8
+  flutter_animate: ^4.5.0
 
 dev_dependencies:
   flutter_test:
@@ -28,6 +30,45 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.4.13
   riverpod_generator: ^2.6.1
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.4
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icon/
+  fonts:
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans.ttf
+        - asset: assets/fonts/PlusJakartaSans-Italic.ttf
+          style: italic
+
+# App icon / launcher generation — run: dart run flutter_launcher_icons
+# Source PNGs are produced from the in-app HotDishMark by test/generate_icon_test.dart.
+# iOS is disabled: this project has no ios/ target (Android-only, built on
+# Windows). To add iOS icons later: `flutter create . --platforms=ios`, set
+# `ios: true`, then re-run `dart run flutter_launcher_icons`.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/cam_on_gradient.png"
+  adaptive_icon_background: "assets/icon/app_icon_bg.png"
+  adaptive_icon_foreground: "assets/icon/cam_fg.png"
+  remove_alpha_ios: true
+
+# Native launch screen (shown during cold start before Flutter renders).
+# Intentionally just the canvas color with NO icon: the native OS splash cannot
+# run the branded choreography (icon spring, pills, dots) — that limitation is
+# the platform's. Keeping it a plain cream canvas lets the animated Flutter
+# SplashScreen start from a clean slate so the icon springs in from zero exactly
+# like the design. Regenerate with: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#FFFBF7"
+  color_dark: "#FFFBF7"
+  android: true
+  ios: false
+  web: false
+  android_12:
+    color: "#FFFBF7"
+    color_dark: "#FFFBF7"

@@ -77,6 +77,10 @@ class Menu {
   final List<Dish> dishes;
   final DateTime createdAt;
 
+  /// Extraction status: 'extracting' (OCR + translation in progress), 'ready',
+  /// or 'failed'. Old responses without the field are treated as 'ready'.
+  final String status;
+
   const Menu({
     required this.id,
     required this.sourceLanguage,
@@ -84,6 +88,7 @@ class Menu {
     this.cuisineType,
     required this.dishes,
     required this.createdAt,
+    this.status = 'ready',
   });
 
   factory Menu.fromJson(Map<String, dynamic> json) => Menu(
@@ -95,7 +100,11 @@ class Menu {
             .map((d) => Dish.fromJson(d))
             .toList(),
         createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+        status: json['status'] ?? 'ready',
       );
+
+  bool get extractionPending => status == 'extracting';
+  bool get extractionFailed => status == 'failed';
 
   bool get allImagesResolved =>
       dishes.every((d) => d.imageStatus == 'ready' || d.imageStatus == 'failed');
