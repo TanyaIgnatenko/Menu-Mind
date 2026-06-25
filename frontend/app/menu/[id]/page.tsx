@@ -5,9 +5,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 
+import { AppShell } from "@/components/AppShell";
+import { LoadingOrbit } from "@/components/LoadingOrbit";
 import { MenuDisplay } from "@/components/MenuDisplay";
-import { ShareButton } from "@/components/ShareButton";
-import { Wordmark } from "@/components/Wordmark";
+import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/button";
 import { getMenu, NotFoundError } from "@/lib/api";
 import { addToHistory } from "@/lib/history";
@@ -29,14 +30,12 @@ export default function MenuPage() {
         const loaded = await getMenu(id);
         if (cancelled) return;
         setMenu(loaded);
-        addToHistory(loaded);
+        // Don't record a still-extracting menu (0 dishes) — wait until it's
+        // ready so the history entry has the real dish count and name.
+        if (loaded.status !== "extracting") addToHistory(loaded);
       } catch (e) {
         if (cancelled) return;
-        if (e instanceof NotFoundError) {
-          setError("not_found");
-        } else {
-          setError("other");
-        }
+        setError(e instanceof NotFoundError ? "not_found" : "other");
       }
     }
     load();
@@ -48,63 +47,65 @@ export default function MenuPage() {
   // Stable callback for the polling hook so it doesn't re-subscribe each render.
   const handleUpdate = useCallback((updated: Menu) => {
     setMenu(updated);
+    // Record once extraction completes so the history dish count is correct.
+    if (updated.status !== "extracting") addToHistory(updated);
   }, []);
 
   useMenuPolling(menu, handleUpdate);
 
-  if (error === "not_found") {
-    notFound();
-  }
+  if (error === "not_found") notFound();
 
   if (error === "other") {
     return (
-      <main className="container mx-auto max-w-3xl px-4 py-8 md:py-12">
-        <Wordmark asLink />
-        <p className="text-sm text-muted-foreground">
-          Couldn&apos;t load this menu. Try again later.
-        </p>
-        <Link href="/">
-          <Button variant="outline" className="mt-4">
-            Back to home
-          </Button>
-        </Link>
-      </main>
+      <AppShell active="scan">
+        <div className="mx-auto max-w-lg rounded-2xl border border-border bg-surface p-8 text-center shadow-card">
+          <p className="font-display text-lg font-bold text-ink">
+            Couldn&apos;t load this menu
+          </p>
+          <p className="mt-1 text-sm text-body">Try again later.</p>
+          <Link href="/">
+            <Button variant="outline" className="mt-4">
+              Back to scan
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
     );
   }
 
-  if (!menu) {
+  // Initial fetch or still extracting → the orbit loader (polling refreshes it).
+  if (!menu || menu.status === "extracting") {
     return (
-      <main className="container mx-auto max-w-3xl px-4 py-8 md:py-12">
-        <Wordmark asLink />
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <span className="h-2 w-2 rounded-full bg-coral dot-bounce" />
-          <span
-            className="h-2 w-2 rounded-full bg-navy dot-bounce"
-            style={{ animationDelay: "0.15s" }}
-          />
-          <span
-            className="h-2 w-2 rounded-full bg-gold dot-bounce"
-            style={{ animationDelay: "0.3s" }}
-          />
-          <p className="text-sm">Loading menu...</p>
+      <AppShell active="scan">
+        <LoadingOrbit
+          caption="Cooking up your menu"
+          subcaption={menu ? "Reading & translating dishes…" : "Loading menu…"}
+        />
+      </AppShell>
+    );
+  }
+
+  if (menu.status === "failed") {
+    return (
+      <AppShell active="scan">
+        <div className="mx-auto max-w-lg rounded-2xl border border-border bg-surface p-8 text-center shadow-card">
+          <p className="font-display text-lg font-bold text-ink">
+            Couldn&apos;t read this menu
+          </p>
+          <p className="mt-1 text-sm text-body">
+            The photo may be blurry or not a menu. Try a clearer photo.
+          </p>
+          <Link href="/">
+            <Button className="mt-4">Try another menu</Button>
+          </Link>
         </div>
-      </main>
+      </AppShell>
     );
   }
 
   return (
-    <main className="container mx-auto max-w-3xl px-4 py-8 md:py-12">
-      <Wordmark asLink />
-
-      <div className="space-y-5">
-        <div className="flex gap-2">
-          <Link href="/">
-            <Button variant="outline">Upload another menu</Button>
-          </Link>
-          <ShareButton menuId={menu.id} />
-        </div>
-        <MenuDisplay menu={menu} />
-      </div>
-    </main>
+    <AppShell active="scan" topBar={<TopBar menu={menu} />}>
+      <MenuDisplay menu={menu} />
+    </AppShell>
   );
 }

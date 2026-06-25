@@ -2,136 +2,182 @@
 
 import { useMemo, useState } from "react";
 
-import type { Menu } from "@/lib/types";
+import { capture } from "@/lib/posthog";
+import type { Dish, Menu } from "@/lib/types";
 
-import { DietaryFilters, filterDishes } from "./DietaryFilters";
 import { DishCard } from "./DishCard";
 
 interface Props {
   menu: Menu;
 }
 
-export function MenuDisplay({ menu }: Props) {
-  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+type FilterMode = "require" | "exclude";
+interface FilterDef {
+  id: string;
+  label: string;
+  tags: string[];
+  mode: FilterMode;
+}
 
-  const toggleFilter = (filterId: string) => {
-    setActiveFilters((prev) => {
+// The six dietary chips from the spec's filter bar.
+const FILTERS: FilterDef[] = [
+  { id: "vegetarian", label: "Vegetarian", tags: ["vegetarian"], mode: "require" },
+  { id: "vegan", label: "Vegan", tags: ["vegan"], mode: "require" },
+  { id: "gluten_free", label: "Gluten-free", tags: ["contains_gluten"], mode: "exclude" },
+  { id: "spicy", label: "Spicy", tags: ["spicy"], mode: "require" },
+  { id: "sweet", label: "Sweet", tags: ["sweet"], mode: "require" },
+  { id: "healthy", label: "Healthy", tags: ["healthy", "low_calorie"], mode: "require" },
+];
+
+function matches(dish: Dish, f: FilterDef): boolean {
+  const tags = dish.dietary_tags ?? [];
+  return f.tags.some((t) => tags.includes(t));
+}
+
+interface DishRef {
+  dish: Dish;
+  index: number;
+}
+
+export function MenuDisplay({ menu }: Props) {
+  const [active, setActive] = useState<Set<string>>(new Set());
+
+  const indexed: DishRef[] = useMemo(
+    () => menu.dishes.map((dish, index) => ({ dish, index })),
+    [menu.dishes],
+  );
+
+  // Only offer a chip when at least one dish makes it meaningful.
+  const availableFilters = useMemo(() => {
+    const present = new Set<string>();
+    for (const { dish } of indexed)
+      for (const t of dish.dietary_tags ?? []) present.add(t);
+    return FILTERS.filter((f) => f.tags.some((t) => present.has(t)));
+  }, [indexed]);
+
+  const filtered = useMemo(() => {
+    if (active.size === 0) return indexed;
+    const on = FILTERS.filter((f) => active.has(f.id));
+    return indexed.filter(({ dish }) =>
+      on.every((f) =>
+        f.mode === "require" ? matches(dish, f) : !matches(dish, f),
+      ),
+    );
+  }, [indexed, active]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, DishRef[]>();
+    for (const ref of filtered) {
+      const cat = ref.dish.category || "Dishes";
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(ref);
+    }
+    return Array.from(map.entries());
+  }, [filtered]);
+
+  function toggle(f: FilterDef) {
+    const activating = !active.has(f.id);
+    capture("filter_applied", {
+      filter_id: f.id,
+      filter_label: f.label,
+      filter_group: f.mode === "exclude" ? "needs" : "prefs",
+      active_count: active.size + (activating ? 1 : -1),
+    });
+    setActive((prev) => {
       const next = new Set(prev);
-      if (next.has(filterId)) {
-        next.delete(filterId);
-      } else {
-        next.add(filterId);
-      }
+      if (next.has(f.id)) next.delete(f.id);
+      else next.add(f.id);
       return next;
     });
-  };
-
-  const filteredDishes = useMemo(
-    () => filterDishes(menu.dishes, activeFilters),
-    [menu.dishes, activeFilters],
-  );
-
-  const grouped = filteredDishes.reduce<Record<string, typeof menu.dishes>>(
-    (acc, dish) => {
-      const cat = dish.category || "Other";
-      if (!acc[cat]) acc[cat] = [];
-      acc[cat].push(dish);
-      return acc;
-    },
-    {},
-  );
-
-  const categories = Object.keys(grouped);
-
-  const scrollToCategory = (index: number) => {
-    document
-      .getElementById(`category-${index}`)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  }
 
   return (
     <div className="space-y-6">
-      {menu.restaurant_name && (
-        <h2 className="font-display text-2xl font-bold text-navy md:text-3xl">
-          {menu.restaurant_name}
-        </h2>
-      )}
-
-      <p className="text-sm text-muted-foreground">
-        Source language: {menu.source_language} · {menu.dishes.length} dishes
-      </p>
-
-      <DietaryFilters
-        dishes={menu.dishes}
-        active={activeFilters}
-        onToggle={toggleFilter}
-        shownCount={filteredDishes.length}
-      />
-
-      {/* Sticky category navigation — only when there is more than one category */}
-      {categories.length > 1 && (
-        <nav className="sticky top-0 z-10 -mx-4 border-b border-border/70 bg-background/90 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-1">
-            {categories.map((category, index) => (
+      {/* Filter bar */}
+      {availableFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-[11px] font-bold uppercase tracking-widest text-muted-2">
+            Filter
+          </span>
+          {availableFilters.map((f) => {
+            const isActive = active.has(f.id);
+            return (
               <button
-                key={category}
-                onClick={() => scrollToCategory(index)}
-                className="shrink-0 rounded-full border border-navy/20 bg-card px-3.5 py-1.5 text-sm font-medium text-navy transition-colors hover:border-coral hover:text-coral"
+                key={f.id}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => toggle(f)}
+                className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
+                  isActive
+                    ? "border-success bg-success text-white"
+                    : "border-border bg-surface text-ink hover:border-success/60"
+                }`}
               >
-                {category}
+                {f.label}
               </button>
-            ))}
-          </div>
-        </nav>
+            );
+          })}
+          {active.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setActive(new Set())}
+              className="ml-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       )}
 
-      {filteredDishes.length === 0 && activeFilters.size > 0 && (
-        <div className="rounded-lg border-2 border-dashed border-gold bg-gold/20 p-8 text-center">
-          <p className="font-display text-lg text-navy">
-            No dishes match the selected filters.
+      {filtered.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border bg-surface p-10 text-center">
+          <p className="font-display text-lg font-bold text-ink">
+            No dishes match these filters
           </p>
           <button
             type="button"
-            onClick={() => setActiveFilters(new Set())}
-            className="mt-3 text-sm font-semibold text-coral underline-offset-4 hover:underline"
+            onClick={() => setActive(new Set())}
+            className="mt-2 text-sm font-semibold text-primary hover:underline"
           >
             Clear filters
           </button>
         </div>
       )}
 
-      {categories.map((category, index) => {
-        const dishes = grouped[category];
-        // English translation of the category, taken from the first dish in
-        // the group (all dishes in a group share the same category).
-        const categoryEnglish = dishes[0]?.category_english ?? "";
-        const showEnglish =
-          categoryEnglish && categoryEnglish.toLowerCase() !== category.toLowerCase();
-
-        return (
-          <section key={category} id={`category-${index}`} className="scroll-mt-20">
-            <div className="mb-4">
-              <h3 className="font-display text-xl font-semibold text-navy">
-                {category}
-              </h3>
-              {showEnglish && (
-                <p className="font-display text-sm italic text-muted-foreground">
-                  {categoryEnglish}
-                </p>
-              )}
-              <div
-                className="mt-2 h-1 w-10 rounded-full bg-coral"
-                aria-hidden="true"
+      {grouped.map(([category, refs]) => (
+        <section key={category}>
+          <div className="mb-4">
+            <h2 className="font-display text-xl font-extrabold tracking-tight text-ink">
+              {category}
+            </h2>
+            <div className="mt-1.5 h-1 w-9 rounded-full bg-primary" aria-hidden="true" />
+          </div>
+          {/* Mobile web: single-column dish rows */}
+          <div className="flex flex-col gap-3 nav:hidden">
+            {refs.map(({ dish, index }) => (
+              <DishCard
+                key={index}
+                dish={dish}
+                menuId={menu.id}
+                index={index}
+                variant="row"
               />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {dishes.map((dish, i) => (
-                <DishCard key={`${category}-${i}`} dish={dish} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+            ))}
+          </div>
+          {/* Desktop: responsive grid (2 → 3 → 4 columns) */}
+          <div className="hidden gap-4 nav:grid nav:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {refs.map(({ dish, index }) => (
+              <DishCard
+                key={index}
+                dish={dish}
+                menuId={menu.id}
+                index={index}
+                variant="card"
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
