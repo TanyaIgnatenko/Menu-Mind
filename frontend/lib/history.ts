@@ -121,13 +121,19 @@ function writeHistory(entries: HistoryEntry[]): void {
 }
 
 export function addToHistory(menu: Menu): HistoryEntry[] {
+  // A menu is recorded eagerly while still extracting (0 dishes) and re-recorded
+  // once extraction completes. Carry over the original timestamp and any custom
+  // name so the completion update refreshes the dish count without bumping the
+  // entry's time or wiping a rename.
+  const prior = getHistory().find((e) => e.id === menu.id);
   const entry: HistoryEntry = {
     id: menu.id,
     restaurantName: menu.restaurant_name,
     cuisineType: menu.cuisine_type,
     autoName: buildAutoName(menu),
     dishCount: menu.dishes.length,
-    savedAt: Date.now(),
+    savedAt: prior?.savedAt ?? Date.now(),
+    customName: prior?.customName,
   };
   // Dedup by id (re-uploading the same image returns the same menu id),
   // newest first, capped at MAX_ENTRIES.

@@ -1,111 +1,147 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle } from "lucide-react";
+
+import { useRouter } from "next/navigation";
 
 import { imageUrl } from "@/lib/api";
+import { useIsDesktop } from "@/lib/useMediaQuery";
 import type { Dish } from "@/lib/types";
-import { DishDetail } from "./DishDetail";
+
+import { DishDetailModal } from "./DishDetailModal";
 
 interface Props {
   dish: Dish;
+  menuId: string;
+  index: number;
+  /** "card" = desktop grid tile; "row" = mobile-web list row. */
+  variant?: "card" | "row";
 }
 
-const IMAGE_WRAPPER = "aspect-[4/3] w-full";
+const POSITIVE_LABELS: Record<string, string> = {
+  vegan: "Vegan",
+  vegetarian: "Veg",
+  healthy: "Healthy",
+  low_calorie: "Low-cal",
+  spicy: "Spicy",
+  sweet: "Sweet",
+};
 
-function ImageBlock({ dish }: { dish: Dish }) {
-  if (dish.image_status === "ready" && dish.image_url) {
-    return (
-      <div className={`${IMAGE_WRAPPER} overflow-hidden`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+/** First positive dietary tag to show as the single chip, if any. */
+function cardChip(dish: Dish): string | null {
+  for (const key of Object.keys(POSITIVE_LABELS)) {
+    if (dish.dietary_tags?.includes(key)) return POSITIVE_LABELS[key];
+  }
+  return null;
+}
+
+/** Stripe shimmer → AI photo with a ~200ms cross-fade once loaded. */
+function DishImage({ dish, className }: { dish: Dish; className?: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const ready = dish.image_status === "ready" && dish.image_url;
+  return (
+    <div className={`relative overflow-hidden bg-canvas-alt ${className ?? ""}`}>
+      <div className={`absolute inset-0 shimmer ${ready && loaded ? "opacity-0" : ""}`} />
+      {ready && (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={imageUrl(dish.image_url)}
           alt={dish.name_english || dish.name_original}
           loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.03]"
+          onLoad={() => setLoaded(true)}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
         />
-      </div>
-    );
-  }
-
-  if (dish.image_status === "failed") {
-    return (
-      <div
-        className={`${IMAGE_WRAPPER} flex flex-col items-center justify-center gap-1 bg-muted p-3 text-center`}
-        title={dish.image_error || "Generation failed"}
-      >
-        <AlertCircle className="h-5 w-5 text-coral/70" aria-hidden="true" />
-        <span className="line-clamp-2 text-xs leading-tight text-muted-foreground">
-          No image for this dish
-        </span>
-      </div>
-    );
-  }
-
-  return <div className={`${IMAGE_WRAPPER} shimmer`} />;
+      )}
+    </div>
+  );
 }
 
-export function DishCard({ dish }: Props) {
-  const [open, setOpen] = useState(false);
+export function DishCard({ dish, menuId, index, variant = "card" }: Props) {
+  const router = useRouter();
+  const isDesktop = useIsDesktop();
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const hasTranslation =
+    dish.name_english && dish.name_english !== dish.name_original;
+  const chip = cardChip(dish);
+  const title = hasTranslation ? dish.name_english : dish.name_original;
+
+  function open() {
+    if (isDesktop) setModalOpen(true);
+    else router.push(`/menu/${menuId}/dish/${index}`);
+  }
+
+  const modal = modalOpen && (
+    <DishDetailModal dish={dish} onClose={() => setModalOpen(false)} />
+  );
+
+  if (variant === "row") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={open}
+          className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface p-3 text-left shadow-card"
+        >
+          <DishImage dish={dish} className="h-[60px] w-[60px] shrink-0 rounded-xl" />
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-bold text-ink">{title}</h3>
+            {hasTranslation && (
+              <p className="truncate text-[11px] italic text-muted">
+                {dish.name_original}
+              </p>
+            )}
+            {chip && (
+              <span className="mt-1 inline-block rounded-full bg-success-bg px-2 py-0.5 text-[11px] font-semibold text-success">
+                {chip}
+              </span>
+            )}
+          </div>
+          {dish.price && (
+            <span className="shrink-0 font-display text-sm font-extrabold text-primary">
+              {dish.price}
+            </span>
+          )}
+        </button>
+        {modal}
+      </>
+    );
+  }
 
   return (
     <>
-      <article
-        className="rise-in overflow-hidden rounded-lg bg-card shadow-card transition-shadow hover:shadow-card-hover cursor-pointer"
-        onClick={() => setOpen(true)}
+      <button
+        type="button"
+        onClick={open}
+        className="rise-in group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface text-left shadow-card transition-shadow hover:shadow-card-hover"
       >
-        <ImageBlock dish={dish} />
-
-        <div className="flex flex-col p-5">
-          {/* Name + price with leader dots */}
-          <div className="flex items-baseline gap-2">
-            <h3 className="font-display text-lg font-semibold leading-snug text-navy">
+        <DishImage dish={dish} className="h-[150px] w-full" />
+        <div className="flex flex-1 flex-col p-4">
+          <h3 className="text-sm font-bold leading-snug text-ink">{title}</h3>
+          {hasTranslation && (
+            <p className="mt-0.5 truncate text-[11px] italic text-muted">
               {dish.name_original}
-            </h3>
-            {dish.price && (
-              <>
-                <span className="price-leader" aria-hidden="true" />
-                <span className="whitespace-nowrap font-display font-semibold text-navy">
-                  {dish.price}
-                </span>
-              </>
+            </p>
+          )}
+          <div className="mt-auto flex items-center justify-between pt-3">
+            {dish.price ? (
+              <span className="font-display text-base font-extrabold text-primary">
+                {dish.price}
+              </span>
+            ) : (
+              <span />
+            )}
+            {chip && (
+              <span className="rounded-full bg-success-bg px-2 py-0.5 text-[11px] font-semibold text-success">
+                {chip}
+              </span>
             )}
           </div>
-
-          {dish.name_english && dish.name_english !== dish.name_original && (
-            <p className="mt-0.5 font-display text-sm italic text-muted-foreground">
-              {dish.name_english}
-            </p>
-          )}
-
-          {dish.description_original && (
-            <div className="mt-2 space-y-1">
-              <p className="text-sm leading-relaxed">
-                {dish.description_original}
-              </p>
-              {dish.description_english &&
-                dish.description_english !== dish.description_original && (
-                  <p className="text-sm italic leading-relaxed text-muted-foreground">
-                    {dish.description_english}
-                  </p>
-                )}
-            </div>
-          )}
-
-          {dish.size && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Size: {dish.size}
-            </p>
-          )}
-
-          {/* Hint to tap */}
-          <p className="mt-3 text-xs text-muted-foreground/60">
-            Tap for details, nutrition & fun facts →
-          </p>
         </div>
-      </article>
-
-      {open && <DishDetail dish={dish} onClose={() => setOpen(false)} />}
+      </button>
+      {modal}
     </>
   );
 }

@@ -15,6 +15,20 @@ function allImagesResolved(menu: Menu): boolean {
   );
 }
 
+/** Extraction (OCR + translation) is still running in the background. */
+function isExtracting(menu: Menu): boolean {
+  return menu.status === "extracting";
+}
+
+/**
+ * The menu is fully settled — nothing left to poll for. Stays false while the
+ * menu is still being extracted (dishes not in yet — note an empty list makes
+ * allImagesResolved() vacuously true) OR while any dish image is still pending.
+ */
+function isSettled(menu: Menu): boolean {
+  return !isExtracting(menu) && allImagesResolved(menu);
+}
+
 function hasFirstImage(menu: Menu): boolean {
   return menu.dishes.some((d) => d.image_status === "ready");
 }
@@ -37,7 +51,7 @@ export function useMenuPolling(
 
   useEffect(() => {
     if (!menu) return;
-    if (allImagesResolved(menu)) return;
+    if (isSettled(menu)) return;
 
     pollStartRef.current = Date.now();
     firstImageCapturedRef.current = false;
@@ -62,7 +76,7 @@ export function useMenuPolling(
         onUpdate(updated);
 
         if (
-          allImagesResolved(updated) ||
+          isSettled(updated) ||
           Date.now() - pollStartRef.current > MAX_POLL_DURATION_MS
         ) {
           return;

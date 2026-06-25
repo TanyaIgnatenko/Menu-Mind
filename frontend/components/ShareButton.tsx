@@ -68,7 +68,7 @@ export function ShareButton({ menuId }: Props) {
             </p>
 
             <div className="mb-4 flex justify-center rounded-lg border-2 border-gold bg-white p-4">
-              <QRCodeSVG value={shareUrl} size={200} fgColor="#5A1C32" />
+              <QRCodeSVG value={shareUrl} size={200} fgColor="#1A1008" />
             </div>
 
             <div className="flex gap-2">
