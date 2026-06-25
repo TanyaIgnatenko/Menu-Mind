@@ -1,29 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Outfit } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { Suspense } from "react";
 
 import { PostHogProvider } from "@/components/PostHogProvider";
 
 import "./globals.css";
 
-const fraunces = Fraunces({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin", "latin-ext"],
   style: ["normal", "italic"],
-  variable: "--font-fraunces",
-});
-
-const outfit = Outfit({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-outfit",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-jakarta",
 });
 
 export const metadata: Metadata = {
   title: "MenuMind",
-  description: "Eat with confidence, anywhere in the world.",
+  description: "Read any menu. Anywhere.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#8E2A4C",
+  themeColor: "#F05A28",
 };
 
 export default function RootLayout({
@@ -33,7 +29,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${fraunces.variable} ${outfit.variable} font-sans`}>
+      <body className={`${jakarta.variable} font-sans`}>
         {/*
           Suspense is required around PostHogProvider because it uses
           useSearchParams() internally, which opts the subtree into

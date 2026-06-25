@@ -3,48 +3,71 @@
 @tailwind utilities;
 
 /*
- * MenuMind "Beet & Cream" tokens
- *   BEET      #8E2A4C -> hsl(340 54% 36%)  actions, brand accent
- *   DEEP BEET #5A1C32 -> hsl(339 53% 23%)  ink, headings
- *   DILL      #5E7D4A -> hsl(96 26% 39%)   secondary accent, the leaf
- *   CREAM     #F6EFE7 -> hsl(32 45% 94%)   smetana paper background
+ * MenuMind "Hot Dish" tokens — mirrors the mobile app (lib/theme/app_theme.dart).
+ *   PRIMARY   #F05A28  brand orange — actions, brand accent
+ *   DEEP      #C03010  gradient end / pressed
+ *   PEACH     #FFD098  gradient start / highlights
+ *   INK       #1A1008  headings / primary text
+ *   BODY      #7A6858  secondary / body copy
+ *   CANVAS    #FFFBF7  warm app background
  */
 @layer base {
   :root {
-    --background: 32 45% 94%;
-    --foreground: 340 18% 26%;
+    --background: 30 100% 98%;
+    --foreground: 27 53% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 340 18% 26%;
+    --card-foreground: 27 53% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 340 18% 26%;
+    --popover-foreground: 27 53% 7%;
 
-    --primary: 340 54% 36%;
+    --primary: 15 87% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 96 26% 39%;
+    --secondary: 153 63% 42%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 30 28% 90%;
-    --muted-foreground: 340 10% 47%;
+    --muted: 32 39% 94%;
+    --muted-foreground: 28 16% 41%;
 
-    --accent: 86 32% 85%;
-    --accent-foreground: 96 30% 18%;
+    --accent: 18 100% 97%;
+    --accent-foreground: 15 87% 45%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 3 78% 53%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 28 26% 85%;
-    --input: 28 26% 83%;
-    --ring: 340 54% 36%;
+    --border: 31 37% 89%;
+    --input: 31 37% 87%;
+    --ring: 15 87% 55%;
 
-    --navy: 339 53% 23%;
-    --coral: 340 54% 36%;
-    --gold: 86 32% 85%;
-    --dill: 96 26% 39%;
+    /* Hot Dish brand ramp + surfaces (web handoff design tokens). */
+    --primary-deep: 11 85% 41%; /* #C03010 gradient end / deep accents */
+    --primary-peach: 33 100% 80%; /* #FFD098 gradient start */
+    --primary-tint: 18 100% 97%; /* #FFF3EE chip/pill bg, active sidebar item */
+    --canvas: 30 100% 98%; /* #FFFBF7 sidebar / cards bg */
+    --canvas-alt: 33 52% 96%; /* #FAF5EF main content area bg */
+    --muted-2: 28 14% 54%; /* #9A8878 captions */
+    --dropzone-border: 21 58% 76%; /* #E5B79E dashed upload border */
 
-    --radius: 1rem;
+    /* Legacy semantic names kept so components keep compiling, remapped to
+       the Hot Dish palette. */
+    --navy: 27 53% 7%; /* ink — headings */
+    --coral: 15 87% 55%; /* primary orange — brand accent */
+    --gold: 33 100% 80%; /* peach — highlights */
+    --dill: 153 63% 42%; /* success green */
+
+    /* Dietary-tag semantics (match mobile AppColors). */
+    --success: 153 63% 42%;
+    --success-bg: 150 64% 96%;
+    --caution: 37 91% 44%;
+    --caution-bg: 38 100% 96%;
+    --allergen: 3 78% 53%;
+    --allergen-bg: 4 100% 97%;
+    --category: 264 29% 51%;
+    --category-bg: 258 62% 96%;
+
+    --radius: 1.125rem;
   }
 }
 
@@ -61,7 +84,12 @@
   }
 }
 
-/* Warm shimmer for images that are still generating */
+/* Hot Dish brand gradient — top-left peach → orange → terracotta. */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #ffd098 0%, #f05a28 52%, #c03010 100%);
+}
+
+/* Warm shimmer for images that are still generating (base cream → white). */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -74,9 +102,9 @@
 .shimmer {
   background: linear-gradient(
     90deg,
-    hsl(var(--muted)) 0%,
-    hsl(var(--gold) / 0.55) 50%,
-    hsl(var(--muted)) 100%
+    hsl(33 39% 91%) 0%,
+    hsl(0 0% 100%) 50%,
+    hsl(33 39% 91%) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
@@ -116,10 +144,33 @@
   animation: rise-in 0.35s ease-out both;
 }
 
+/* Loading orbit — the ring rotates 360°/3.4s; items counter-rotate to stay
+   upright. (Brand icon at the center does not rotate.) */
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes orbit-spin-rev {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.orbit-ring {
+  animation: orbit-spin 3.4s linear infinite;
+}
+
+.orbit-item {
+  animation: orbit-spin-rev 3.4s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shimmer,
   .dot-bounce,
-  .rise-in {
+  .rise-in,
+  .orbit-ring,
+  .orbit-item {
     animation: none;
   }
 }
