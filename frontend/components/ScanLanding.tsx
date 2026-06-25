@@ -108,7 +108,7 @@ export function ScanLanding({ onUploaded }: Props) {
     <div className="mx-auto w-full max-w-[620px]">
       <div className="flex flex-col items-center text-center">
         <span className="rounded-full bg-primary-tint px-3.5 py-1.5 text-xs font-bold text-primary">
-          🌍 Works in 40+ languages
+          🌍 <span className="hidden nav:inline">Works in </span>40+ languages
         </span>
 
         {/* Desktop and mobile hero copy per the spec. */}
@@ -119,9 +119,12 @@ export function ScanLanding({ onUploaded }: Props) {
           Read any menu.
         </h1>
 
-        <p className="mt-3 w-full max-w-md text-[15px] leading-relaxed text-body">
+        <p className="mt-3 hidden w-full max-w-md text-[15px] leading-relaxed text-body nav:block">
           Upload a photo of a restaurant menu and get every dish translated —
           with AI images, dietary filters, and nutrition.
+        </p>
+        <p className="mt-3 w-full max-w-md text-[15px] leading-relaxed text-body nav:hidden">
+          Snap a menu and get every dish translated with AI photos.
         </p>
 
         <input
@@ -149,8 +152,11 @@ export function ScanLanding({ onUploaded }: Props) {
               : "border-dropzone bg-surface hover:bg-canvas"
           }`}
         >
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-peach/50">
-            <Upload className="h-6 w-6 text-primary-deep" aria-hidden="true" />
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-tint nav:h-[72px] nav:w-[72px]">
+            <span className="text-[26px] leading-none nav:hidden" aria-hidden="true">
+              📷
+            </span>
+            <Upload className="hidden h-8 w-8 text-primary nav:block" aria-hidden="true" />
           </span>
           <span className="mt-4 font-display text-base font-bold text-ink nav:text-lg">
             <span className="hidden nav:inline">Drag a menu photo here</span>
