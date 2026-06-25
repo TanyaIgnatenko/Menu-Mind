@@ -45,6 +45,7 @@
     --primary-deep: 11 85% 41%; /* #C03010 gradient end / deep accents */
     --primary-peach: 33 100% 80%; /* #FFD098 gradient start */
     --primary-tint: 18 100% 97%; /* #FFF3EE chip/pill bg, active sidebar item */
+    --surface: 0 0% 100%; /* #FFFFFF cards, top bar, modals */
     --canvas: 30 100% 98%; /* #FFFBF7 sidebar / cards bg */
     --canvas-alt: 33 52% 96%; /* #FAF5EF main content area bg */
     --muted-2: 28 14% 54%; /* #9A8878 captions */

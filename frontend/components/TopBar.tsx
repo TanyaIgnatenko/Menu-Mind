@@ -19,7 +19,7 @@ export function TopBar({ menu }: { menu: Menu }) {
     .join(" · ");
 
   return (
-    <div className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur supports-[backdrop-filter]:bg-surface/75">
+    <div className="sticky top-0 z-10 border-b border-border bg-surface">
       <div className="mx-auto flex max-w-[1340px] items-center gap-3 px-5 py-3.5 md:px-8">
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-display text-xl font-extrabold tracking-[-0.02em] text-ink">

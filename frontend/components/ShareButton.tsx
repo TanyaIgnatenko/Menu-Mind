@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Check, Copy, Share2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -43,15 +44,17 @@ export function ShareButton({ menuId }: Props) {
         Share
       </Button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-navy/60 p-4 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="relative w-full max-w-sm rounded-lg bg-card p-6 shadow-card-hover"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-navy/60 p-4 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
           >
+            <div
+              className="relative w-full max-w-sm rounded-2xl bg-surface p-6 shadow-card-hover"
+              onClick={(e) => e.stopPropagation()}
+            >
             <button
               onClick={() => setOpen(false)}
               aria-label="Close"
@@ -94,8 +97,9 @@ export function ShareButton({ menuId }: Props) {
               </Button>
             </div>
           </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

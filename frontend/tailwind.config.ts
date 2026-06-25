@@ -30,6 +30,7 @@ const config: Config = {
         ink: "hsl(var(--foreground))",
         body: "hsl(var(--muted-foreground))",
         "muted-2": "hsl(var(--muted-2))",
+        surface: "hsl(var(--surface))",
         canvas: "hsl(var(--canvas))",
         "canvas-alt": "hsl(var(--canvas-alt))",
         dropzone: "hsl(var(--dropzone-border))",

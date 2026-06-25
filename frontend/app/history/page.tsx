@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
-import { Trash2 } from "lucide-react";
+import { Check, Pencil, Trash2, X } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
-import { getHistory, removeFromHistory, type HistoryEntry } from "@/lib/history";
+import {
+  getHistory,
+  removeFromHistory,
+  renameHistoryEntry,
+  type HistoryEntry,
+} from "@/lib/history";
 
 function timeAgo(ts: number): string {
   const s = Math.floor((Date.now() - ts) / 1000);
@@ -26,12 +31,32 @@ function timeAgo(ts: number): string {
   });
 }
 
+function titleFor(e: HistoryEntry): string {
+  return e.customName || e.restaurantName || e.autoName || "Menu";
+}
+
 export default function HistoryPage() {
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
 
   useEffect(() => {
     setEntries(getHistory());
   }, []);
+
+  const startEdit = (e: HistoryEntry) => {
+    setEditingId(e.id);
+    setDraft(e.customName || "");
+  };
+  const commitEdit = (id: string) => {
+    setEntries(renameHistoryEntry(id, draft));
+    setEditingId(null);
+    setDraft("");
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setDraft("");
+  };
 
   return (
     <AppShell active="history">
@@ -54,30 +79,88 @@ export default function HistoryPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {entries.map((e) => (
-            <div
-              key={e.id}
-              className="group relative rounded-2xl border border-border bg-surface p-5 shadow-card transition-shadow hover:shadow-card-hover"
-            >
-              <Link href={`/menu/${e.id}`} className="block">
-                <p className="truncate pr-6 font-display text-base font-bold text-ink">
-                  {e.customName || e.restaurantName || e.autoName}
-                </p>
-                <p className="mt-1 text-xs text-muted-2">
-                  {e.dishCount} {e.dishCount === 1 ? "dish" : "dishes"} ·{" "}
-                  {timeAgo(e.savedAt)}
-                </p>
-              </Link>
-              <button
-                type="button"
-                onClick={() => setEntries(removeFromHistory(e.id))}
-                aria-label="Remove from history"
-                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-muted opacity-0 transition-opacity hover:bg-canvas-alt hover:text-allergen group-hover:opacity-100"
+          {entries.map((e) => {
+            const isEditing = editingId === e.id;
+            return (
+              <div
+                key={e.id}
+                className="relative flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-card transition-shadow hover:shadow-card-hover"
               >
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-          ))}
+                {/* Actions */}
+                <div className="absolute right-3 top-3 flex items-center gap-1">
+                  {isEditing ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => commitEdit(e.id)}
+                        aria-label="Save name"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-body hover:bg-canvas-alt hover:text-primary"
+                      >
+                        <Check className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        aria-label="Cancel"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-body hover:bg-canvas-alt hover:text-ink"
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => startEdit(e)}
+                        aria-label="Rename"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-canvas-alt hover:text-ink"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEntries(removeFromHistory(e.id))}
+                        aria-label="Delete from history"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-canvas-alt hover:text-allergen"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {isEditing ? (
+                  <div className="pr-16">
+                    <input
+                      autoFocus
+                      value={draft}
+                      onChange={(ev) => setDraft(ev.target.value)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === "Enter") commitEdit(e.id);
+                        if (ev.key === "Escape") cancelEdit();
+                      }}
+                      placeholder="Name this menu"
+                      className="w-full rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <p className="mt-1 text-xs text-muted-2">
+                      {e.dishCount} {e.dishCount === 1 ? "dish" : "dishes"} ·{" "}
+                      {timeAgo(e.savedAt)}
+                    </p>
+                  </div>
+                ) : (
+                  <Link href={`/menu/${e.id}`} className="block pr-16">
+                    <p className="truncate font-display text-base font-bold text-ink">
+                      {titleFor(e)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-2">
+                      {e.dishCount} {e.dishCount === 1 ? "dish" : "dishes"} ·{" "}
+                      {timeAgo(e.savedAt)}
+                    </p>
+                  </Link>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </AppShell>
