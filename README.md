@@ -6,21 +6,24 @@
 
 Traveling abroad, you open a menu and recognize nothing. MenuMind lets you photograph any restaurant menu and instantly see every dish — translated into English and rendered as a photorealistic AI image — so you actually know what you're about to order.
 
-**Upload screen**
+## Demo
 
-![Upload screen](docs/screenshots/upload.png)
+<video src="https://github.com/TanyaIgnatenko/Menu-Mind/raw/main/docs/demo.mp4" controls width="720"></video>
 
-The starting screen where users upload a photo of any menu.
+▶️ [Watch the demo](./docs/demo.mp4) — photograph a menu and watch every dish get translated and rendered as an AI image.
 
-**Menu screen**
+## Features
 
-The screen with a visualised menu.
-
-![Menu screen](docs/screenshots/menu1.png)
-
-![Menu screen](docs/screenshots/menu2.png)
-
-![Menu screen](docs/screenshots/menu3.png)
+- 📸 **Snap & translate** — photograph any menu; every dish is extracted and translated (original name + English), with the original-language text preserved.
+- 🌍 **40+ languages** — handles even mixed-language menus (e.g. German + Italian on one page) without duplicate translations.
+- 🎨 **AI dish photos** — a photorealistic image is generated for every dish (Flux diffusion model), so you can see an unfamiliar dish before ordering.
+- ⚡ **Progressive loading** — translated text appears instantly while the AI images stream in (shimmer → fade-in); re-scanning a menu is served from cache immediately.
+- 🥗 **Dietary filters & tags** — filter the menu by Vegetarian, Vegan, Gluten-free, Spicy or Sweet, with allergen warnings (⚠ gluten, nuts, dairy, …) surfaced per dish.
+- 🔢 **Nutrition estimates** — calories plus protein / carbs / fat for each dish.
+- 🗂️ **Categorized menu + dish detail** — dishes grouped by section (e.g. _Antipasti_, _Mains_); tap any dish for its photo, description, dietary info, nutrition and fun facts.
+- 🕘 **History** — past scans are saved locally; rename, reopen or delete them.
+- 🔗 **Share** — share a translated menu via link or QR code.
+- 📱 **Cross-platform** — responsive web app **and** a native Android app: drag-and-drop or webcam capture on web, camera/gallery on mobile.
 
 ## Tech stack
 
