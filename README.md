@@ -8,9 +8,9 @@ Traveling abroad, you open a menu and recognize nothing. MenuMind lets you photo
 
 ## Demo
 
-<video src="https://github.com/TanyaIgnatenko/Menu-Mind/raw/main/docs/demo.mp4" controls width="720"></video>
+<video src="https://github.com/user-attachments/assets/833489d1-0451-4922-90c7-e12600e713b0" controls width="720"></video>
 
-▶️ [Watch the demo](./docs/demo.mp4) — photograph a menu and watch every dish get translated and rendered as an AI image.
+▶️ [Watch the demo](https://github.com/user-attachments/assets/833489d1-0451-4922-90c7-e12600e713b0) — photograph a menu and watch every dish get translated and rendered as an AI image.
 
 ## Features
 
