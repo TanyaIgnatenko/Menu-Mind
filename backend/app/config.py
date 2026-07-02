@@ -2,6 +2,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +22,21 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str
+
+    @field_validator("database_url")
+    @classmethod
+    def _use_asyncpg_driver(cls, v: str) -> str:
+        """Managed hosts (Railway, Heroku, …) hand out a plain
+        ``postgres://`` / ``postgresql://`` URL, but the async SQLAlchemy engine
+        needs the asyncpg driver. Normalize the scheme so DATABASE_URL can be
+        referenced as-is from the provider's connection string.
+        """
+        prefix, sep, rest = v.partition("://")
+        if not sep:
+            return v
+        if prefix in ("postgres", "postgresql"):
+            return f"postgresql+asyncpg://{rest}"
+        return v
 
     # External APIs
     gemini_api_key: str
