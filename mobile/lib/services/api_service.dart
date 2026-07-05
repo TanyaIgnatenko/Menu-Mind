@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/menu.dart';
 
-const _baseUrl = 'https://me-0413d7154a1b47ee95b74759203fbe89.ecs.eu-central-1.on.aws/api/v1';
-const _imageBase = 'https://me-0413d7154a1b47ee95b74759203fbe89.ecs.eu-central-1.on.aws';
+const _baseUrl = 'https://menu-mind-production-559d.up.railway.app/api/v1';
+const _imageBase = 'https://menu-mind-production-559d.up.railway.app';
 
 class ApiService {
   final _dio = Dio(BaseOptions(
