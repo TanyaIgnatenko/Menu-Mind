@@ -126,14 +126,11 @@ export function DishDetailContent({
           </p>
         )}
 
-        {(dish.about || dish.description_english || dish.description_original) && (
-          <div className="mt-4 space-y-1.5">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-2">
-              About this dish
-            </h3>
-            {(dish.about || dish.description_english) && (
+        {(dish.description_english || dish.description_original) && (
+          <div className="mt-2 space-y-0.5">
+            {dish.description_english && (
               <p className="text-sm leading-relaxed text-body">
-                {dish.about || dish.description_english}
+                {dish.description_english}
               </p>
             )}
             {dish.description_original &&
@@ -142,6 +139,15 @@ export function DishDetailContent({
                   {dish.description_original}
                 </p>
               )}
+          </div>
+        )}
+
+        {dish.about && (
+          <div className="mt-4 space-y-1.5">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-2">
+              About this dish
+            </h3>
+            <p className="text-sm leading-relaxed text-body">{dish.about}</p>
           </div>
         )}
 
@@ -169,24 +175,6 @@ export function DishDetailContent({
         <div className="mt-5">
           <NutritionTiles dish={dish} />
         </div>
-
-        {dish.fun_facts && dish.fun_facts.length > 0 && (
-          <div className="mt-5 space-y-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-2">
-              Did you know?
-            </h3>
-            <ol className="space-y-2">
-              {dish.fun_facts.map((fact, i) => (
-                <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-body">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-tint text-[11px] font-bold text-primary">
-                    {i + 1}
-                  </span>
-                  <span>{fact}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
 
         {dish.nutrition && (
           <p className="mt-5 text-[11px] text-muted-2">

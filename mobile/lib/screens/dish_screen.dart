@@ -157,15 +157,33 @@ class DishScreen extends StatelessWidget {
                   ),
                 ],
 
-                // About this dish.
-                if (dish.about.isNotEmpty || dish.descriptionEnglish.isNotEmpty) ...[
+                // Menu description (as written) + its translation.
+                if (dish.descriptionEnglish.isNotEmpty ||
+                    dish.descriptionOriginal.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  if (dish.descriptionEnglish.isNotEmpty)
+                    Text(dish.descriptionEnglish, style: AppText.bodySmall),
+                  if (dish.descriptionOriginal.isNotEmpty &&
+                      dish.descriptionOriginal != dish.descriptionEnglish) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      dish.descriptionOriginal,
+                      style: const TextStyle(
+                        fontFamily: AppTheme.fontFamily,
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ],
+
+                // About this dish (AI-generated narrative).
+                if (dish.about.isNotEmpty) ...[
                   _divider(),
                   const _Eyebrow('About this dish'),
                   const SizedBox(height: 7),
-                  Text(
-                    dish.about.isNotEmpty ? dish.about : dish.descriptionEnglish,
-                    style: AppText.bodySmall,
-                  ),
+                  Text(dish.about, style: AppText.bodySmall),
                 ],
 
                 // Dietary information.
