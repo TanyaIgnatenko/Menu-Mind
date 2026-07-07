@@ -86,6 +86,10 @@ class GeminiClient:
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
+                # Menu extraction is structured OCR/translation, not reasoning —
+                # Gemini 2.5's "thinking" adds latency with little benefit here.
+                # Disable it to cut extraction time.
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
 
