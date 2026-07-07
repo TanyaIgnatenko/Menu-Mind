@@ -25,6 +25,8 @@ export interface Dish {
   visual_appearance: string;
   price: string;
   dietary_tags?: string[];
+  /** Engaging paragraph about the dish (backend field; filled by the 2nd pass). */
+  about?: string;
   fun_facts?: string[];
   nutrition?: Nutrition | null;
   image_status: ImageStatus;
