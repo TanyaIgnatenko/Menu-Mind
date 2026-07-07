@@ -145,6 +145,26 @@ async def complete_menu_extraction(
     await session.commit()
 
 
+async def apply_dish_enrichment(
+    session: AsyncSession, menu_id: UUID, by_index: dict[int, dict]
+) -> None:
+    """Merge second-pass about/nutrition into a ready menu's dishes (by index)."""
+    record = await _get_record(session, menu_id)
+    if record is None or not isinstance(record.dishes_json, dict):
+        return
+    dishes = record.dishes_json.get("dishes", [])
+    for i, dish in enumerate(dishes):
+        enr = by_index.get(i)
+        if not enr:
+            continue
+        if enr.get("about"):
+            dish["about"] = enr["about"]
+        if enr.get("nutrition") is not None:
+            dish["nutrition"] = enr["nutrition"]
+    flag_modified(record, "dishes_json")
+    await session.commit()
+
+
 async def mark_menu_failed(session: AsyncSession, menu_id: UUID) -> None:
     """Mark a pending menu record as 'failed' so the client stops polling."""
     record = await _get_record(session, menu_id)

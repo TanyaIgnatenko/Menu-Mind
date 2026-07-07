@@ -93,6 +93,44 @@ class GeminiClient:
             ),
         )
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(RateLimitError),
+        reraise=True,
+    )
+    async def generate_text(
+        self,
+        prompt: str,
+        model: str = "gemini-2.5-flash",
+    ) -> dict[str, Any]:
+        """Text-only Gemini call (no image) returning raw text + token counts."""
+        try:
+            response = await asyncio.wait_for(
+                self._client.aio.models.generate_content(
+                    model=model,
+                    contents=[prompt],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    ),
+                ),
+                timeout=self._timeout,
+            )
+        except TimeoutError as e:
+            raise ExtractionError(f"Gemini call exceeded {self._timeout}s timeout") from e
+        except Exception as e:
+            msg = str(e).lower()
+            if any(token in msg for token in ("rate", "quota", "429", "503", "unavailable", "overloaded")):
+                raise RateLimitError(str(e)) from e
+            raise ExtractionError(f"Gemini call failed: {e}") from e
+
+        return {
+            "text": response.text,
+            "input_tokens": response.usage_metadata.prompt_token_count,
+            "output_tokens": response.usage_metadata.candidates_token_count,
+        }
+
 
 def parse_json_response(text: str) -> Any:
     """Parse JSON from an LLM response, tolerating markdown code fences.

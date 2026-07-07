@@ -1,7 +1,7 @@
 """Pydantic schema for a single dish."""
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ImageStatus = Literal["pending", "generating", "ready", "failed"]
 
@@ -43,6 +43,30 @@ class Dish(BaseModel):
         description="Estimated nutrition per serving: "
         "{calories: int, protein_g: float, carbs_g: float, fat_g: float}",
     )
+
+    @field_validator(
+        "name_original",
+        "name_english",
+        "description_original",
+        "description_english",
+        "size",
+        "category",
+        "category_english",
+        "price",
+        "visual_appearance",
+        "about",
+        mode="before",
+    )
+    @classmethod
+    def _none_to_empty(cls, v: object) -> object:
+        """Gemini occasionally emits null for an optional string field — coerce it
+        to '' so one stray null doesn't fail the whole menu extraction."""
+        return "" if v is None else v
+
+    @field_validator("dietary_tags", mode="before")
+    @classmethod
+    def _none_to_list(cls, v: object) -> object:
+        return [] if v is None else v
 
     # Image generation fields (Phase 4)
     image_status: ImageStatus = Field("pending", description="Image generation status")

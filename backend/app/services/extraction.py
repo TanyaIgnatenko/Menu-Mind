@@ -17,13 +17,6 @@ Extract every dish/drink visible on the menu. For each item, provide these field
 - name_english: English version of the name. Set this to "" ONLY if name_original is genuinely in English (composed of English words or an English-language menu entry) OR if it already includes an explicit English translation separated by a slash/dash (e.g. "Crema di Pomodoro / Tomato Cream"). LOANWORDS DO NOT COUNT AS ALREADY-ENGLISH: dishes like "Spaghetti alla Carbonara", "Lasagna", "Gnocchi", "Sushi", "Tiramisu", "Pierogi" are Italian/Japanese/Polish names borrowed into English — for these you MUST still provide name_english, either as a clean English translation ("Pasta with Pancetta and Egg") or, when the name has no real English equivalent, simply repeat or transliterate the dish name in name_english so the field is populated. The original may contain the SAME item in several non-English languages (e.g. German + Russian) — in that case give ONE single English translation, do NOT translate each language separately.
 - description_original: description text from the menu, or empty string if none
 - description_english: ALWAYS provide a clear English description of the dish. If description_original is in another language, translate it to English. If description_original is already in English, copy it here (cleaned up). If there are multiple languages in the original, produce ONE single English version — never concatenate or duplicate translations per language. If the menu has no description for this dish, write a brief 1-sentence English description based on the dish name. This field must NEVER be empty.
-- about: a single engaging paragraph (2-4 sentences) describing this dish for a curious traveler. Cover what it is, key ingredients, flavor profile, and any cultural or origin note that fits naturally. Write in flowing English prose, NOT a list. Make it warm and appetizing. Empty string if the dish is completely unrecognisable.
-- nutrition: estimated nutritional values per typical serving of this dish. Base your estimate on standard culinary knowledge — this is an approximation, not a medical fact. Return an object with:
-  - calories: integer (kcal per serving), e.g. 450
-  - protein_g: float (grams of protein), e.g. 22.5
-  - carbs_g: float (grams of carbohydrates), e.g. 38.0
-  - fat_g: float (grams of fat), e.g. 18.5
-  If you truly cannot estimate (e.g. dish is completely unrecognisable), return null.
 - size: serving size if explicitly specified (e.g. "20cl", "2cl"), otherwise empty
 - category: section header from the menu (e.g. "Suppen", "Pasta"). Preserve slash-separated bilingual headers like "Zuppe / Suppen".
 - category_english: clean English translation of the category. PROVIDE THIS ONLY IF the category does not already contain English. If the category is already English or includes an English version (e.g. "Zuppe / Soups"), set this to "". For multilingual non-English categories (e.g. "Vorspeisen & Salate // Закуски & салаты"), give ONE single English translation (e.g. "Appetizers & Salads").
@@ -68,8 +61,6 @@ Return ONLY valid JSON in this schema:
       "name_english": "...",
       "description_original": "...",
       "description_english": "...",
-      "about": "A flowing paragraph describing the dish...",
-      "nutrition": {"calories": 450, "protein_g": 22.5, "carbs_g": 38.0, "fat_g": 18.5},
       "size": "",
       "category": "...",
       "category_english": "...",
@@ -154,3 +145,76 @@ async def extract_menu_from_image(
     )
 
     return menu
+
+
+# ── Second pass: about + nutrition ──────────────────────────────────────────
+# Kept out of the primary extraction (which drives the loading spinner) because
+# these are heavy, detail-only fields. Generated text-only (no image) right after
+# the menu is shown, so they stream in like the images.
+
+ENRICHMENT_PROMPT = """You are enriching dishes from a {cuisine} restaurant menu with a
+short engaging description and a nutrition estimate. Work from the dish names/knowledge.
+
+For EACH dish below (identified by its index), produce:
+- about: a single engaging paragraph (2-4 sentences) for a curious traveler — what it is,
+  key ingredients, flavor, and a cultural or origin note if it fits. Flowing English prose,
+  NOT a list. Empty string "" if the dish is unrecognisable.
+- nutrition: estimated values per typical serving, from standard culinary knowledge (an
+  approximation, not medical fact): {{"calories": int, "protein_g": float, "carbs_g": float,
+  "fat_g": float}}. Use null only if you truly cannot estimate.
+
+Dishes:
+{dish_list}
+
+Return ONLY valid JSON, exactly one item per dish index:
+{{"items": [{{"index": 0, "about": "...", "nutrition": {{"calories": 450, "protein_g": 22.5, "carbs_g": 38.0, "fat_g": 18.5}}}}]}}"""
+
+
+async def enrich_dishes(
+    dishes: list[Dish],
+    cuisine_type: str | None,
+    client: GeminiClient | None = None,
+) -> dict[int, dict]:
+    """Second-pass enrichment: about + nutrition per dish, keyed by dish index.
+
+    Text-only Gemini call (no image). Best-effort — the caller treats failure as
+    non-fatal, leaving about/nutrition empty.
+    """
+    if not dishes:
+        return {}
+    client = client or GeminiClient()
+
+    lines = []
+    for i, d in enumerate(dishes):
+        name = d.name_english or d.name_original
+        cat = d.category_english or d.category
+        desc = d.description_english
+        line = f"{i}. {name}"
+        if cat:
+            line += f" [{cat}]"
+        if desc:
+            line += f" — {desc}"
+        lines.append(line)
+
+    prompt = ENRICHMENT_PROMPT.format(
+        cuisine=cuisine_type or "restaurant", dish_list="\n".join(lines)
+    )
+    result = await client.generate_text(prompt)
+    parsed = parse_json_response(result["text"])
+    items = parsed.get("items", []) if isinstance(parsed, dict) else []
+
+    by_index: dict[int, dict] = {}
+    for it in items:
+        if isinstance(it, dict) and isinstance(it.get("index"), int):
+            by_index[it["index"]] = {
+                "about": it.get("about") or "",
+                "nutrition": it.get("nutrition"),
+            }
+
+    logger.info(
+        "enrichment_completed",
+        dish_count=len(dishes),
+        enriched=len(by_index),
+        output_tokens=result["output_tokens"],
+    )
+    return by_index

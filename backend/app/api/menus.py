@@ -14,13 +14,14 @@ from app.config import get_settings
 from app.exceptions import InvalidImageError
 from app.schemas.menu import Menu
 from app.services.cache import (
+    apply_dish_enrichment,
     complete_menu_extraction,
     create_pending_menu,
     get_cached_menu,
     get_menu_by_id,
     mark_menu_failed,
 )
-from app.services.extraction import extract_menu_from_image
+from app.services.extraction import enrich_dishes, extract_menu_from_image
 from app.services.image_generation import generate_images_for_menu
 from app.services.preprocessing import compute_image_hash, preprocess_image
 from app.services.rate_limit import check_and_increment
@@ -78,6 +79,16 @@ async def _extract_and_generate(menu_id: UUID, processed_bytes: bytes) -> None:
             await complete_menu_extraction(session, menu_id, menu_create)
         extracted = True
         logger.info("extraction_complete", menu_id=str(menu_id), dish_count=len(menu_create.dishes))
+        # Second pass: about + nutrition (text-only, no image). Runs after the menu
+        # is already shown (status=ready), so it never blocks the loading spinner,
+        # and before image gen to avoid concurrent dishes_json writes. Non-fatal.
+        try:
+            by_index = await enrich_dishes(menu_create.dishes, menu_create.cuisine_type)
+            async with session_factory() as session:
+                await apply_dish_enrichment(session, menu_id, by_index)
+            logger.info("enrichment_complete", menu_id=str(menu_id), enriched=len(by_index))
+        except Exception as enr_err:
+            logger.warning("enrichment_failed", menu_id=str(menu_id), error=str(enr_err))
     except Exception as e:
         logger.error(
             "extraction_failed",
