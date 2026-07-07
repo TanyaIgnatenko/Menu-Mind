@@ -78,10 +78,11 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold text-ink">Retention</h2>
           <p>
-            Your uploaded photo is processed to produce the translated menu and is not
-            used for any other purpose. The resulting menu text and generated dish
-            images are cached to speed up future scans. You can request deletion of
-            data associated with your uploads (see Contact).
+            Your uploaded photo is processed to produce the translated menu and is
+            <strong className="text-ink"> not stored on our servers</strong> after
+            processing. Only the resulting menu text and generated dish images are
+            cached (keyed by an image fingerprint) to speed up future scans. You can
+            request deletion of data associated with your uploads (see Contact).
           </p>
         </section>
 

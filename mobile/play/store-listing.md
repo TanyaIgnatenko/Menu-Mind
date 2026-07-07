@@ -65,24 +65,38 @@ language they don’t speak.
 
 ## Data safety form — answers
 
+> Scope: this form is about the **Android app**. The Android app has **no
+> analytics/crash SDK** (PostHog is web-only), so don't declare analytics here.
+
 **Does your app collect or share any of the required user data types?** → **Yes**
 
 **Is all data encrypted in transit?** → **Yes** (HTTPS)
 **Do you provide a way to request data deletion?** → **Yes** (email in privacy policy)
 
-### Data types
+### Data types — declare exactly these
 
-| Data type | Collected | Shared | Purpose | Notes |
-|---|---|---|---|---|
-| **Photos** (menu photos) | Yes | Yes | App functionality | Sent to our backend + Google Gemini (translation) & Fal.ai (image gen). Not for ads. |
-| **App activity** (in-app interactions / screen views) | Yes | Yes | Analytics | Anonymous, via PostHog. |
-| **App info & performance** (crash / diagnostics — if enabled) | Optional | No | Diagnostics | Only if you add crash reporting. |
+**Photos and videos → Photos**
+- Collected: **Yes** · Shared: **Yes**
+- Purpose: **App functionality** (read + translate the menu)
+- Linked to the user's identity: **No** (app has no account/login)
+- Processed ephemerally: **Yes** — the menu photo is sent to the server and to
+  Google (Gemini) to read the text; the original photo is **not stored** on our
+  servers. (Only AI-*generated* dish images are cached, keyed by a content hash.)
+- Shared with: our backend and **Google (Gemini)** for OCR/translation.
 
-**IP address:** used only to rate-limit uploads / prevent abuse → in the Data
-Safety form this falls under **Security & fraud prevention**; not tied to identity.
+That is the **only user-data type to declare.**
 
-**No** collection of: name, email, phone, precise location, contacts, financial
-info, health, messages, calendar. (The app has no account.)
+### Do NOT declare
+- **App activity / analytics** — the Android app has no analytics SDK.
+- **Crash/diagnostics** — no crash-reporting SDK in the app.
+- Name, email, phone, precise/approx location, contacts, financial info, health,
+  messages, calendar, files — none collected (no account, no login).
+
+### IP address (edge case)
+Collected server-side **only** to rate-limit uploads / prevent abuse. Google's
+Data safety form has no dedicated "IP for security" data type, and IP used purely
+for fraud/abuse prevention is one of the documented exceptions you are **not
+required to disclose**. Leave it undeclared; it's covered by the privacy policy.
 
 ---
 
