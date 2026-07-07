@@ -16,10 +16,21 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "MenuMind",
   description: "Read any menu. Anywhere.",
+  applicationName: "MenuMind",
+  appleWebApp: {
+    capable: true,
+    title: "MenuMind",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#F05A28",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
