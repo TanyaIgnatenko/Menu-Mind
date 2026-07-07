@@ -22,13 +22,21 @@ from app.services.cache import (
     mark_menu_failed,
 )
 from app.services.extraction import enrich_dishes, extract_menu_from_image
-from app.services.image_generation import generate_images_for_menu
+from app.services.image_generation import (
+    generate_images_for_menu,
+    mark_menu_images_generating,
+)
 from app.services.preprocessing import compute_image_hash, preprocess_image
 from app.services.rate_limit import check_and_increment
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["menus"], prefix="/menus")
+
+# Photos for the first N (on-screen) dishes are generated before the text-only
+# enrichment pass and the remaining photos — getting the visible dishes' images
+# up fast matters most for perceived speed.
+_FIRST_IMAGE_BATCH = 6
 
 
 # Keep references to running background tasks so they aren't garbage-collected
@@ -79,16 +87,6 @@ async def _extract_and_generate(menu_id: UUID, processed_bytes: bytes) -> None:
             await complete_menu_extraction(session, menu_id, menu_create)
         extracted = True
         logger.info("extraction_complete", menu_id=str(menu_id), dish_count=len(menu_create.dishes))
-        # Second pass: about + nutrition (text-only, no image). Runs after the menu
-        # is already shown (status=ready), so it never blocks the loading spinner,
-        # and before image gen to avoid concurrent dishes_json writes. Non-fatal.
-        try:
-            by_index = await enrich_dishes(menu_create.dishes, menu_create.cuisine_type)
-            async with session_factory() as session:
-                await apply_dish_enrichment(session, menu_id, by_index)
-            logger.info("enrichment_complete", menu_id=str(menu_id), enriched=len(by_index))
-        except Exception as enr_err:
-            logger.warning("enrichment_failed", menu_id=str(menu_id), error=str(enr_err))
     except Exception as e:
         logger.error(
             "extraction_failed",
@@ -105,7 +103,49 @@ async def _extract_and_generate(menu_id: UUID, processed_bytes: bytes) -> None:
         await engine.dispose()
 
     if extracted:
-        # generate_images_for_menu manages its own engine/session.
+        # The functions below each manage their own engine/session.
+        await _enrich_and_generate_images(menu_id, menu_create)
+
+
+async def _run_enrichment(menu_id: UUID, menu_create) -> None:  # type: ignore[no-untyped-def]
+    """Second pass: about + nutrition (text-only, no image). Runs after the menu
+    is already shown (status=ready), so it never blocks the loading spinner.
+    Non-fatal — a failure just leaves those fields empty."""
+    settings = get_settings()
+    engine = create_async_engine(settings.database_url)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    try:
+        by_index = await enrich_dishes(menu_create.dishes, menu_create.cuisine_type)
+        async with session_factory() as session:
+            await apply_dish_enrichment(session, menu_id, by_index)
+        logger.info("enrichment_complete", menu_id=str(menu_id), enriched=len(by_index))
+    except Exception as enr_err:
+        logger.warning("enrichment_failed", menu_id=str(menu_id), error=str(enr_err))
+    finally:
+        await engine.dispose()
+
+
+async def _enrich_and_generate_images(menu_id: UUID, menu_create) -> None:  # type: ignore[no-untyped-def]
+    """Post-extraction priority pipeline (all steps sequential — the per-dish
+    image write is only race-free without concurrency):
+
+      1. mark every dish image 'generating' so all cards show a loading state
+      2. generate photos for the first N (on-screen) dishes
+      3. enrich all dishes with about + nutrition (quick text pass)
+      4. generate the remaining photos
+
+    For menus that fit one screen (<= N dishes) enrichment runs BEFORE the images
+    instead, so `about` is present before clients stop polling — they settle once
+    every image resolves, and with no tail batch step 3 would otherwise land last.
+    """
+    n = len(menu_create.dishes)
+    await mark_menu_images_generating(menu_id)
+    if n > _FIRST_IMAGE_BATCH:
+        await generate_images_for_menu(menu_id, indices=range(_FIRST_IMAGE_BATCH))
+        await _run_enrichment(menu_id, menu_create)
+        await generate_images_for_menu(menu_id, indices=range(_FIRST_IMAGE_BATCH, n))
+    else:
+        await _run_enrichment(menu_id, menu_create)
         await generate_images_for_menu(menu_id)
 
 

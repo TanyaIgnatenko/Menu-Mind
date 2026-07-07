@@ -8,6 +8,7 @@ no zombie 'generating' rows.
 Caching means repeated dishes across menus reuse the same generated image,
 so re-uploads are near-instant.
 """
+from collections.abc import Iterable
 from uuid import UUID
 
 from sqlalchemy import select
@@ -163,11 +164,46 @@ async def _generate_one_dish(client: FalClient, dish: Dish) -> tuple[str, str, s
         return "failed", "", error_msg
 
 
-async def generate_images_for_menu(menu_id: UUID) -> None:
-    """Generate images for all dishes in a menu, one at a time.
+async def mark_menu_images_generating(menu_id: UUID) -> None:
+    """Mark every dish's image as 'generating' so all cards show a loading state
+    immediately, before the (slower) per-dish generation runs. Called once, up
+    front, so the tail dishes still read as loading while the first batch renders.
+    """
+    settings = get_settings()
+    if not settings.fal_api_key:
+        return
 
-    Runs as a detached asyncio task (scheduled from the menus endpoint).
-    Creates its own DB engine because it runs outside the request scope.
+    engine = create_async_engine(settings.database_url)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    try:
+        async with session_factory() as session:
+            menu_record = await _load_menu(session, menu_id)
+            if menu_record is None:
+                return
+            raw = menu_record.dishes_json
+            dishes_data = list(raw.get("dishes", [])) if isinstance(raw, dict) else list(raw)
+            for d in dishes_data:
+                d["image_status"] = "generating"
+            # Preserve every other top-level key (cuisine_type, status).
+            menu_record.dishes_json = (
+                {**raw, "dishes": dishes_data} if isinstance(raw, dict) else dishes_data
+            )
+            await _persist(session, menu_record)
+    finally:
+        await engine.dispose()
+
+
+async def generate_images_for_menu(
+    menu_id: UUID, indices: Iterable[int] | None = None
+) -> None:
+    """Generate images for the given dish indices (all if None), one at a time.
+
+    Runs as a detached asyncio task (scheduled from the menus endpoint). Creates
+    its own DB engine because it runs outside the request scope. Assumes dishes
+    were already marked 'generating' by mark_menu_images_generating; if not, they
+    simply transition pending→ready. Safe to call several times for disjoint
+    index ranges as long as the calls are sequential (the per-dish read-modify-
+    write is only race-free without concurrency).
     """
     settings = get_settings()
     if not settings.fal_api_key:
@@ -178,40 +214,28 @@ async def generate_images_for_menu(menu_id: UUID) -> None:
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     try:
-        # Load dishes, mark all as generating
+        # Load dishes (a fresh snapshot — picks up any enrichment merged since).
         async with session_factory() as session:
             menu_record = await _load_menu(session, menu_id)
             if menu_record is None:
                 logger.error("image_gen_menu_not_found", menu_id=str(menu_id))
                 return
-
-            # dishes_json может быть dict (новый формат с cuisine_type)
-            # или list (старый формат) — поддерживаем оба.
             raw = menu_record.dishes_json
-            if isinstance(raw, dict):
-                cuisine_type = raw.get("cuisine_type")
-                dishes_data = list(raw.get("dishes", []))
-            else:
-                cuisine_type = None
-                dishes_data = list(raw)
-
+            dishes_data = list(raw.get("dishes", [])) if isinstance(raw, dict) else list(raw)
             dishes = [Dish.model_validate(d) for d in dishes_data]
 
-            for d in dishes_data:
-                d["image_status"] = "generating"
-
-            # Сохраняем обратно в том же формате что пришло
-            if isinstance(raw, dict):
-                menu_record.dishes_json = {"cuisine_type": cuisine_type, "dishes": dishes_data}
-            else:
-                menu_record.dishes_json = dishes_data
-            await _persist(session, menu_record)
+        target = (
+            list(range(len(dishes)))
+            if indices is None
+            else [i for i in indices if 0 <= i < len(dishes)]
+        )
 
         client = FalClient()
 
         # Generate one dish at a time, persisting after each.
         # No concurrency → no race conditions → no zombies.
-        for idx, dish in enumerate(dishes):
+        for idx in target:
+            dish = dishes[idx]
             status = "failed"
             url = ""
             error = "Unknown error"
@@ -228,20 +252,18 @@ async def generate_images_for_menu(menu_id: UUID) -> None:
                 error = str(e)[:100] if str(e) else "Unexpected error"
 
             # Persist this single dish result. Safe read-modify-write because
-            # this loop is the only writer (sequential, no concurrency).
+            # image-gen calls run sequentially (no concurrent writers). Spreading
+            # the current dict preserves enrichment (about/nutrition) and the
+            # menu's top-level status key.
             try:
                 async with session_factory() as session:
                     menu_record = await _load_menu(session, menu_id)
                     if menu_record is None:
                         return
                     raw2 = menu_record.dishes_json
-                    if isinstance(raw2, dict):
-                        cuisine_type2 = raw2.get("cuisine_type")
-                        current = list(raw2.get("dishes", []))
-                    else:
-                        cuisine_type2 = None
-                        current = list(raw2)
-
+                    current = (
+                        list(raw2.get("dishes", [])) if isinstance(raw2, dict) else list(raw2)
+                    )
                     if idx < len(current):
                         current[idx] = {
                             **current[idx],
@@ -249,15 +271,14 @@ async def generate_images_for_menu(menu_id: UUID) -> None:
                             "image_url": url,
                             "image_error": error,
                         }
-                        if isinstance(raw2, dict):
-                            menu_record.dishes_json = {"cuisine_type": cuisine_type2, "dishes": current}
-                        else:
-                            menu_record.dishes_json = current
+                        menu_record.dishes_json = (
+                            {**raw2, "dishes": current} if isinstance(raw2, dict) else current
+                        )
                         await _persist(session, menu_record)
             except Exception as e:
                 logger.error("image_db_update_failed", dish=dish.name_english, error=str(e))
 
-        logger.info("image_gen_complete", menu_id=str(menu_id), dish_count=len(dishes))
+        logger.info("image_gen_batch_complete", menu_id=str(menu_id), count=len(target))
     finally:
         await engine.dispose()
 
