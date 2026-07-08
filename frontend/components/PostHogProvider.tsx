@@ -24,8 +24,11 @@ function PostHogInit() {
       capture_pageview: false,
       // Respect DNT and EU privacy defaults.
       respect_dnt: true,
-      // Session recordings, heatmaps and autocapture are all enabled in the
-      // PostHog project settings — no extra config needed here.
+      // Session replay is off. This stops the web client from recording even if
+      // the project toggle is on; also disable it in PostHog project settings
+      // (Settings → Session Replay) to stop it at the source for every client.
+      disable_session_recording: true,
+      // Heatmaps and autocapture remain controlled by the PostHog project settings.
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
