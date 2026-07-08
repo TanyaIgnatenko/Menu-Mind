@@ -48,6 +48,7 @@ export function useMenuPolling(
   const pollTimerRef = useRef<number | null>(null);
   const pollStartRef = useRef<number>(0);
   const firstImageCapturedRef = useRef(false);
+  const failureCapturedRef = useRef(false);
 
   useEffect(() => {
     if (!menu) return;
@@ -55,6 +56,7 @@ export function useMenuPolling(
 
     pollStartRef.current = Date.now();
     firstImageCapturedRef.current = false;
+    failureCapturedRef.current = false;
     let cancelled = false;
 
     async function poll() {
@@ -71,6 +73,14 @@ export function useMenuPolling(
             seconds: Math.round((Date.now() - pollStartRef.current) / 1000),
             dish_count: updated.dishes.length,
           });
+        }
+
+        // Recognition failure (0 dishes / not a menu / timeout): the async
+        // extraction gave up. The sync upload path can't see this — it only
+        // catches POST-time errors — so capture it here, once.
+        if (!failureCapturedRef.current && updated.status === "failed") {
+          failureCapturedRef.current = true;
+          capture("menu_upload_failed", { reason: "extraction_failed" });
         }
 
         onUpdate(updated);

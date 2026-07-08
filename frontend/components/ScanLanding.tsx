@@ -7,7 +7,7 @@ import { Upload } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { uploadMenu, UploadLimitError } from "@/lib/api";
-import { capture } from "@/lib/posthog";
+import { capture, getDistinctId } from "@/lib/posthog";
 import type { Menu } from "@/lib/types";
 
 import { LoadingOrbit } from "./LoadingOrbit";
@@ -54,7 +54,7 @@ export function ScanLanding({ onUploaded }: Props) {
     setStage(0);
     setProcessing(true);
     try {
-      const menu = await uploadMenu(file);
+      const menu = await uploadMenu(file, getDistinctId());
       capture("menu_uploaded", {
         menu_id: menu.id,
         dish_count: menu.dishes.length,

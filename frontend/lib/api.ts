@@ -76,13 +76,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // ── API calls ─────────────────────────────────────────────────────────────────
 
-export async function uploadMenu(file: File): Promise<Menu> {
+export async function uploadMenu(file: File, deviceId?: string): Promise<Menu> {
   const formData = new FormData();
   formData.append("file", file);
+
+  // Forward the caller's anonymous analytics id so the backend's server-side
+  // scan events attribute to the same person (scans-per-user).
+  const headers: Record<string, string> = {};
+  if (deviceId) headers["X-Device-Id"] = deviceId;
 
   const response = await fetch(`${API_BASE}/menus/`, {
     method: "POST",
     body: formData,
+    headers,
   });
 
   return handleResponse<Menu>(response);

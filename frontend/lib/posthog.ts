@@ -18,6 +18,7 @@ export type EventName =
   | "menu_upload_failed"
   | "menu_opened_from_history"
   | "menu_shared"
+  | "dish_opened"
   | "filter_applied"
   | "filter_cleared"
   | "rate_limit_hit"
@@ -38,6 +39,11 @@ export type EventProperties = {
   };
   menu_shared: {
     menu_id: string;
+  };
+  dish_opened: {
+    menu_id: string;
+    dish_name: string;
+    index: number;
   };
   filter_applied: {
     filter_id: string;
@@ -66,4 +72,17 @@ export function capture<E extends EventName>(
 ): void {
   // posthog-js is a no-op when not initialised (e.g. SSR), so this is safe.
   posthog.capture(event, properties);
+}
+
+/**
+ * The anonymous PostHog distinct id for this browser. Sent to the backend as
+ * X-Device-Id so its server-side `scan_processed` events attribute to the same
+ * person. Returns undefined if PostHog isn't initialised (SSR / no key).
+ */
+export function getDistinctId(): string | undefined {
+  try {
+    return posthog.get_distinct_id();
+  } catch {
+    return undefined;
+  }
 }

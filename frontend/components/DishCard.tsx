@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { imageUrl } from "@/lib/api";
+import { capture } from "@/lib/posthog";
 import { useIsDesktop } from "@/lib/useMediaQuery";
 import type { Dish } from "@/lib/types";
 
@@ -69,6 +70,7 @@ export function DishCard({ dish, menuId, index, variant = "card" }: Props) {
   const title = hasTranslation ? dish.name_english : dish.name_original;
 
   function open() {
+    capture("dish_opened", { menu_id: menuId, dish_name: title, index });
     if (isDesktop) setModalOpen(true);
     else router.push(`/menu/${menuId}/dish/${index}`);
   }
