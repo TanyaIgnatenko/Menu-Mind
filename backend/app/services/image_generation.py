@@ -195,7 +195,7 @@ async def mark_menu_images_generating(menu_id: UUID) -> None:
 
 async def generate_images_for_menu(
     menu_id: UUID, indices: Iterable[int] | None = None
-) -> None:
+) -> tuple[int, int]:
     """Generate images for the given dish indices (all if None), one at a time.
 
     Runs as a detached asyncio task (scheduled from the menus endpoint). Creates
@@ -204,22 +204,26 @@ async def generate_images_for_menu(
     simply transition pending→ready. Safe to call several times for disjoint
     index ranges as long as the calls are sequential (the per-dish read-modify-
     write is only race-free without concurrency).
+
+    Returns (ready_count, failed_count) for the dishes processed in this call.
     """
     settings = get_settings()
     if not settings.fal_api_key:
         logger.warning("image_gen_skipped_no_api_key", menu_id=str(menu_id))
-        return
+        return (0, 0)
 
     engine = create_async_engine(settings.database_url)
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
+    ready_count = 0
+    failed_count = 0
     try:
         # Load dishes (a fresh snapshot — picks up any enrichment merged since).
         async with session_factory() as session:
             menu_record = await _load_menu(session, menu_id)
             if menu_record is None:
                 logger.error("image_gen_menu_not_found", menu_id=str(menu_id))
-                return
+                return (0, 0)
             raw = menu_record.dishes_json
             dishes_data = list(raw.get("dishes", [])) if isinstance(raw, dict) else list(raw)
             dishes = [Dish.model_validate(d) for d in dishes_data]
@@ -251,6 +255,11 @@ async def generate_images_for_menu(
                 )
                 error = str(e)[:100] if str(e) else "Unexpected error"
 
+            if status == "ready":
+                ready_count += 1
+            else:
+                failed_count += 1
+
             # Persist this single dish result. Safe read-modify-write because
             # image-gen calls run sequentially (no concurrent writers). Spreading
             # the current dict preserves enrichment (about/nutrition) and the
@@ -259,7 +268,7 @@ async def generate_images_for_menu(
                 async with session_factory() as session:
                     menu_record = await _load_menu(session, menu_id)
                     if menu_record is None:
-                        return
+                        return (ready_count, failed_count)
                     raw2 = menu_record.dishes_json
                     current = (
                         list(raw2.get("dishes", [])) if isinstance(raw2, dict) else list(raw2)
@@ -281,6 +290,8 @@ async def generate_images_for_menu(
         logger.info("image_gen_batch_complete", menu_id=str(menu_id), count=len(target))
     finally:
         await engine.dispose()
+
+    return (ready_count, failed_count)
 
 
 async def _load_menu(session: AsyncSession, menu_id: UUID) -> MenuRecord | None:

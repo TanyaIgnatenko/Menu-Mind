@@ -90,6 +90,31 @@ def _s3_lookup_cached_url(cache_key: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Uploaded menu photos (retention-limited, for debugging scans)
+# ---------------------------------------------------------------------------
+# Stored under a dedicated `_uploads/` prefix so a 30-day S3 lifecycle-expiry
+# rule can be scoped to menu photos WITHOUT touching the generated dish-image
+# cache under `_cache/`. Local (dev) storage is skipped — this is a prod-only
+# diagnostic. Returns the object key (not a public URL — these are not served).
+
+def save_menu_upload(scan_id: str, image_bytes: bytes) -> str | None:
+    """Store one uploaded menu photo for later inspection. Returns its S3 object
+    key, or None when not using S3 (local dev). Only call when enabled by config."""
+    if not _use_s3():
+        return None
+    settings = get_settings()
+    object_key = f"_uploads/{scan_id}.jpg"
+    _s3_client().put_object(
+        Bucket=settings.s3_bucket,
+        Key=object_key,
+        Body=image_bytes,
+        ContentType="image/jpeg",
+    )
+    logger.info("menu_upload_stored_s3", scan_id=scan_id, size_bytes=len(image_bytes))
+    return object_key
+
+
+# ---------------------------------------------------------------------------
 # Local filesystem backend
 # ---------------------------------------------------------------------------
 

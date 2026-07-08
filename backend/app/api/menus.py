@@ -1,5 +1,6 @@
 """Menu API endpoints."""
 import asyncio
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
@@ -11,8 +12,9 @@ from sqlalchemy.ext.asyncio import (
 
 from app.api.dependencies import get_db
 from app.config import get_settings
-from app.exceptions import InvalidImageError
+from app.exceptions import ExtractionError, InvalidImageError, SchemaValidationError
 from app.schemas.menu import Menu
+from app.services.analytics import capture
 from app.services.cache import (
     apply_dish_enrichment,
     complete_menu_extraction,
@@ -26,9 +28,25 @@ from app.services.image_generation import (
     generate_images_for_menu,
     mark_menu_images_generating,
 )
+from app.services.image_storage import save_menu_upload
 from app.services.preprocessing import compute_image_hash, preprocess_image
 from app.services.rate_limit import check_and_increment
 from app.utils.logging import get_logger
+
+
+def _classify_failure(exc: Exception) -> str:
+    """Map an extraction exception to a coarse failure_reason for analytics.
+
+    A non-menu photo (or an otherwise unreadable one) surfaces as
+    SchemaValidationError("No dishes extracted…"), so 'zero_dishes' doubles as the
+    'not a menu' bucket.
+    """
+    msg = str(exc).lower()
+    if isinstance(exc, SchemaValidationError):
+        return "zero_dishes" if "no dishes" in msg else "invalid_output"
+    if isinstance(exc, ExtractionError):
+        return "timeout" if "timeout" in msg else "extraction_error"
+    return "error"
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["menus"], prefix="/menus")
@@ -67,7 +85,9 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-async def _extract_and_generate(menu_id: UUID, processed_bytes: bytes) -> None:
+async def _extract_and_generate(
+    menu_id: UUID, processed_bytes: bytes, device_id: str
+) -> None:
     """Background pipeline for one upload: extract the menu (slow OCR +
     translation), then generate dish images.
 
@@ -75,24 +95,59 @@ async def _extract_and_generate(menu_id: UUID, processed_bytes: bytes) -> None:
     response — the request can no longer be killed by the gateway timeout (504).
     Uses its own DB engine because it runs outside the request scope. The image
     is already validated + preprocessed by the request handler.
+
+    Emits one `scan_processed` analytics event summarising outcome, failure
+    reason, per-stage timings, and image success/failure counts.
     """
     settings = get_settings()
     engine = create_async_engine(settings.database_url)
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-    extracted = False
+    # Store the uploaded menu photo (retention-limited) so failed scans can be
+    # inspected. Best-effort — never blocks or fails the pipeline.
+    upload_key: str | None = None
+    if settings.store_menu_uploads:
+        try:
+            upload_key = save_menu_upload(str(menu_id), processed_bytes)
+        except Exception as up_err:
+            logger.warning("menu_upload_store_failed", menu_id=str(menu_id), error=str(up_err))
+
+    metrics: dict[str, object] = {
+        "dishes_count": 0,
+        "primary_extraction_ms": None,
+        "enrichment_ms": None,
+        "time_to_last_image_ms": None,
+        "images_ready": 0,
+        "images_failed": 0,
+        "cuisine_type": None,
+        "image_stored": upload_key is not None,
+    }
+    outcome = "failed"
+    failure_reason: str | None = "error"
+    menu_create = None
+
+    t_start = time.monotonic()
+    t_ext = t_start
     try:
+        t_ext = time.monotonic()
         menu_create = await extract_menu_from_image(processed_bytes)
+        metrics["primary_extraction_ms"] = int((time.monotonic() - t_ext) * 1000)
         async with session_factory() as session:
             await complete_menu_extraction(session, menu_id, menu_create)
-        extracted = True
+        outcome = "success"
+        failure_reason = None
+        metrics["dishes_count"] = len(menu_create.dishes)
+        metrics["cuisine_type"] = menu_create.cuisine_type
         logger.info("extraction_complete", menu_id=str(menu_id), dish_count=len(menu_create.dishes))
     except Exception as e:
+        metrics["primary_extraction_ms"] = int((time.monotonic() - t_ext) * 1000)
+        failure_reason = _classify_failure(e)
         logger.error(
             "extraction_failed",
             menu_id=str(menu_id),
             error=str(e),
             error_type=type(e).__name__,
+            failure_reason=failure_reason,
         )
         try:
             async with session_factory() as session:
@@ -102,30 +157,44 @@ async def _extract_and_generate(menu_id: UUID, processed_bytes: bytes) -> None:
     finally:
         await engine.dispose()
 
-    if extracted:
+    if outcome == "success" and menu_create is not None:
         # The functions below each manage their own engine/session.
-        await _enrich_and_generate_images(menu_id, menu_create)
+        img_metrics = await _enrich_and_generate_images(menu_id, menu_create)
+        metrics.update(img_metrics)
+        metrics["time_to_last_image_ms"] = int((time.monotonic() - t_start) * 1000)
+
+    capture(
+        "scan_processed",
+        {**metrics, "outcome": outcome, "failure_reason": failure_reason},
+        distinct_id=device_id,
+    )
 
 
-async def _run_enrichment(menu_id: UUID, menu_create) -> None:  # type: ignore[no-untyped-def]
+async def _run_enrichment(menu_id: UUID, menu_create) -> int | None:  # type: ignore[no-untyped-def]
     """Second pass: about + nutrition (text-only, no image). Runs after the menu
     is already shown (status=ready), so it never blocks the loading spinner.
-    Non-fatal — a failure just leaves those fields empty."""
+    Non-fatal — a failure just leaves those fields empty.
+
+    Returns the enrichment duration in ms, or None if it failed.
+    """
     settings = get_settings()
     engine = create_async_engine(settings.database_url)
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    t = time.monotonic()
     try:
         by_index = await enrich_dishes(menu_create.dishes, menu_create.cuisine_type)
         async with session_factory() as session:
             await apply_dish_enrichment(session, menu_id, by_index)
         logger.info("enrichment_complete", menu_id=str(menu_id), enriched=len(by_index))
+        return int((time.monotonic() - t) * 1000)
     except Exception as enr_err:
         logger.warning("enrichment_failed", menu_id=str(menu_id), error=str(enr_err))
+        return None
     finally:
         await engine.dispose()
 
 
-async def _enrich_and_generate_images(menu_id: UUID, menu_create) -> None:  # type: ignore[no-untyped-def]
+async def _enrich_and_generate_images(menu_id: UUID, menu_create) -> dict[str, object]:  # type: ignore[no-untyped-def]
     """Post-extraction priority pipeline (all steps sequential — the per-dish
     image write is only race-free without concurrency):
 
@@ -137,16 +206,20 @@ async def _enrich_and_generate_images(menu_id: UUID, menu_create) -> None:  # ty
     For menus that fit one screen (<= N dishes) enrichment runs BEFORE the images
     instead, so `about` is present before clients stop polling — they settle once
     every image resolves, and with no tail batch step 3 would otherwise land last.
+
+    Returns {enrichment_ms, images_ready, images_failed} for analytics.
     """
     n = len(menu_create.dishes)
     await mark_menu_images_generating(menu_id)
     if n > _FIRST_IMAGE_BATCH:
-        await generate_images_for_menu(menu_id, indices=range(_FIRST_IMAGE_BATCH))
-        await _run_enrichment(menu_id, menu_create)
-        await generate_images_for_menu(menu_id, indices=range(_FIRST_IMAGE_BATCH, n))
+        r1, f1 = await generate_images_for_menu(menu_id, indices=range(_FIRST_IMAGE_BATCH))
+        enrichment_ms = await _run_enrichment(menu_id, menu_create)
+        r2, f2 = await generate_images_for_menu(menu_id, indices=range(_FIRST_IMAGE_BATCH, n))
+        ready, failed = r1 + r2, f1 + f2
     else:
-        await _run_enrichment(menu_id, menu_create)
-        await generate_images_for_menu(menu_id)
+        enrichment_ms = await _run_enrichment(menu_id, menu_create)
+        ready, failed = await generate_images_for_menu(menu_id)
+    return {"enrichment_ms": enrichment_ms, "images_ready": ready, "images_failed": failed}
 
 
 @router.post("/", response_model=Menu, status_code=201)
@@ -197,7 +270,10 @@ async def create_menu(
     # Persist a placeholder and respond immediately; process in the background.
     pending = await create_pending_menu(db, image_hash)
     logger.info("scheduling_extraction", menu_id=str(pending.id))
-    task = asyncio.create_task(_extract_and_generate(pending.id, processed_bytes))
+    # Anonymous per-install id from the client (mobile/web send their PostHog
+    # distinct_id) so scan events attribute to a user; fall back to a per-scan id.
+    device_id = request.headers.get("x-device-id") or str(pending.id)
+    task = asyncio.create_task(_extract_and_generate(pending.id, processed_bytes, device_id))
     _background_tasks.add(task)
     task.add_done_callback(_on_image_gen_done)
 

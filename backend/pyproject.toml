@@ -18,6 +18,7 @@ dependencies = [
     "tenacity>=9.0.0",
     "structlog>=24.4.0",
     "boto3>=1.35.0",
+    "posthog>=3.5.0,<4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -57,7 +58,7 @@ disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["google.genai.*", "tenacity.*"]
+module = ["google.genai.*", "tenacity.*", "posthog.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

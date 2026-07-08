@@ -58,6 +58,16 @@ class Settings(BaseSettings):
     s3_region: str = "eu-central-1"
     s3_public_url_base: str = ""  # e.g. https://bucket.s3.eu-central-1.amazonaws.com
 
+    # Store the uploaded menu photo under the `_uploads/` S3 prefix so failed
+    # scans can be inspected. Privacy-sensitive: OFF by default. Enable only once
+    # the privacy policy reflects it AND a 30-day lifecycle-expiry rule exists on
+    # that prefix (otherwise photos are retained indefinitely). See docs.
+    store_menu_uploads: bool = False
+
+    # Analytics (PostHog, server-side). Empty api key → analytics is a no-op.
+    posthog_api_key: str = ""
+    posthog_host: str = "https://eu.i.posthog.com"
+
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "https://menu-mind-tawny.vercel.app"]
 
