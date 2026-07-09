@@ -113,6 +113,9 @@ async def _extract_and_generate(
             logger.warning("menu_upload_store_failed", menu_id=str(menu_id), error=str(up_err))
 
     metrics: dict[str, object] = {
+        # menu_id links a failed event straight to its stored photo at
+        # _uploads/<menu_id>.jpg (when image_stored is true).
+        "menu_id": str(menu_id),
         "dishes_count": 0,
         "primary_extraction_ms": None,
         "enrichment_ms": None,
