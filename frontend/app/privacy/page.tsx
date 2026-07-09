@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
         Privacy Policy
       </h1>
-      <p className="mt-1 text-sm text-muted-2">Last updated: 7 July 2026</p>
+      <p className="mt-1 text-sm text-muted-2">Last updated: 9 July 2026</p>
 
       <div className="mt-6 space-y-6 text-[15px] leading-relaxed text-body">
         <p>
@@ -79,10 +79,12 @@ export default function PrivacyPage() {
           <h2 className="font-display text-lg font-bold text-ink">Retention</h2>
           <p>
             Your uploaded photo is processed to produce the translated menu and is
-            <strong className="text-ink"> not stored on our servers</strong> after
-            processing. Only the resulting menu text and generated dish images are
-            cached (keyed by an image fingerprint) to speed up future scans. You can
-            request deletion of data associated with your uploads (see Contact).
+            then <strong className="text-ink">stored for up to 30 days</strong> to
+            diagnose and improve menu recognition, after which it is automatically
+            deleted. The resulting menu text and generated dish images are cached
+            (keyed by an image fingerprint) to speed up future scans. You can
+            request deletion of data associated with your uploads at any time (see
+            Contact).
           </p>
         </section>
 

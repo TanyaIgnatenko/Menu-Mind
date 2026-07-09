@@ -77,11 +77,13 @@ language they don’t speak.
 
 **Photos and videos → Photos**
 - Collected: **Yes** · Shared: **Yes**
-- Purpose: **App functionality** (read + translate the menu)
+- Purpose: **App functionality** (read + translate the menu; the stored copy is
+  used to diagnose and improve menu recognition)
 - Linked to the user's identity: **No** (app has no account/login)
-- Processed ephemerally: **Yes** — the menu photo is sent to the server and to
-  Google (Gemini) to read the text; the original photo is **not stored** on our
-  servers. (Only AI-*generated* dish images are cached, keyed by a content hash.)
+- Processed ephemerally: **No** — the menu photo is sent to the server and to
+  Google (Gemini) to read the text, and is **stored for up to 30 days** (then
+  auto-deleted) so failed scans can be inspected. (AI-*generated* dish images are
+  cached separately, keyed by a content hash.)
 - Shared with: our backend and **Google (Gemini)** for OCR/translation.
 
 That is the **only user-data type to declare.**
