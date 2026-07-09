@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/menu.dart';
+import '../services/analytics.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/dish_screen.dart';
@@ -26,10 +27,13 @@ class DishCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => DishScreen(dish: dish, api: api)),
-          ),
+          onTap: () {
+            Analytics.capture('dish_opened', {'dish_name': name});
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => DishScreen(dish: dish, api: api)),
+            );
+          },
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(

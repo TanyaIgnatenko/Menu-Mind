@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../models/menu.dart';
+import '../services/analytics.dart';
 import '../services/api_service.dart';
 import '../services/history_service.dart';
 import '../services/menu_photo_store.dart';
@@ -60,7 +61,19 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
   Future<void> _pick(ImageSource source) async {
     final xFile = await _picker.pickImage(source: source, imageQuality: 85);
     if (xFile == null) return;
+    Analytics.capture('scan_started', {
+      'source': source == ImageSource.camera ? 'camera' : 'gallery',
+    });
     await _upload(File(xFile.path));
+  }
+
+  /// Coarse reason bucket for a failed scan, from the user-facing message.
+  String _failReason(String msg) {
+    final m = msg.toLowerCase();
+    if (m.contains('too long')) return 'timeout';
+    if (m.contains('read the menu')) return 'extraction_failed';
+    if (m.contains('connection') || m.contains('internet')) return 'network';
+    return 'error';
   }
 
   Future<void> _upload(File file) async {
@@ -82,7 +95,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
       // (OCR + translation) in the background. Poll until it's ready — the
       // loading screen stays up meanwhile — so the slow work can't hit the
       // gateway timeout (504).
-      Menu menu = await _api.uploadMenu(file);
+      Menu menu = await _api.uploadMenu(file, deviceId: Analytics.distinctId);
       final deadline = DateTime.now().add(const Duration(minutes: 4));
       while (menu.extractionPending) {
         if (DateTime.now().isAfter(deadline)) {
@@ -99,6 +112,12 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
       if (menu.extractionFailed) {
         throw ApiException('Could not read the menu. Try a clearer photo.');
       }
+
+      Analytics.capture('scan_succeeded', {
+        'dishes_count': menu.dishes.length,
+        if (menu.cuisineType != null && menu.cuisineType!.isNotEmpty)
+          'cuisine_type': menu.cuisineType!,
+      });
 
       // image_picker returns a cache file the OS can purge — copy it into the
       // app's documents dir (stored by filename) so the History thumbnail survives.
@@ -120,6 +139,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
       final msg = e is ApiException
           ? e.message
           : 'Could not process the menu. Please try again.';
+      Analytics.capture('scan_failed', {'reason': _failReason(msg)});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), backgroundColor: AppColors.primaryDeep),
       );

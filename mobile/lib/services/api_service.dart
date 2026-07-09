@@ -18,7 +18,7 @@ class ApiService {
     return '$_imageBase$relativePath';
   }
 
-  Future<Menu> uploadMenu(File imageFile) async {
+  Future<Menu> uploadMenu(File imageFile, {String? deviceId}) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
         imageFile.path,
@@ -36,6 +36,9 @@ class ApiService {
         options: Options(
           sendTimeout: const Duration(minutes: 2),
           receiveTimeout: const Duration(minutes: 3),
+          // Forward the anonymous analytics id so the backend's scan events
+          // attribute to the same person (scans-per-user).
+          headers: deviceId != null ? {'X-Device-Id': deviceId} : null,
         ),
       );
     } on DioException catch (e) {
