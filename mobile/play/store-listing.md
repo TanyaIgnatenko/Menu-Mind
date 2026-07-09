@@ -65,32 +65,47 @@ language they don’t speak.
 
 ## Data safety form — answers
 
-> Scope: this form is about the **Android app**. The Android app has **no
-> analytics/crash SDK** (PostHog is web-only), so don't declare analytics here.
+> Scope: this form is about the **Android app**. It sends anonymous product
+> analytics to PostHog (Phase 2a) and menu photos to our backend + Google Gemini.
+> No crash-reporting SDK (Google Play collects crashes itself via Android vitals —
+> that is NOT declared here).
 
 **Does your app collect or share any of the required user data types?** → **Yes**
 
 **Is all data encrypted in transit?** → **Yes** (HTTPS)
 **Do you provide a way to request data deletion?** → **Yes** (email in privacy policy)
 
-### Data types — declare exactly these
+### Data types — declare these THREE
 
-**Photos and videos → Photos**
+**1. Photos and videos → Photos**
 - Collected: **Yes** · Shared: **Yes**
 - Purpose: **App functionality** (read + translate the menu; the stored copy is
   used to diagnose and improve menu recognition)
 - Linked to the user's identity: **No** (app has no account/login)
 - Processed ephemerally: **No** — the menu photo is sent to the server and to
   Google (Gemini) to read the text, and is **stored for up to 30 days** (then
-  auto-deleted) so failed scans can be inspected. (AI-*generated* dish images are
-  cached separately, keyed by a content hash.)
+  auto-deleted) so failed scans can be inspected.
 - Shared with: our backend and **Google (Gemini)** for OCR/translation.
 
-That is the **only user-data type to declare.**
+**2. App activity → App interactions**
+- Collected: **Yes** · Shared: **Yes**
+- Purpose: **Analytics**
+- Linked to the user's identity: **No** (anonymous)
+- Processed ephemerally: **No**
+- What: which features are used (scan started/succeeded/failed, dish opened),
+  sent to **PostHog** (EU).
+
+**3. Device or other IDs**
+- Collected: **Yes** · Shared: **Yes**
+- Purpose: **Analytics**
+- Linked to the user's identity: **No** (anonymous)
+- Processed ephemerally: **No**
+- What: a random **per-install id** we generate (NOT an advertising ID, NOT the
+  hardware ID) to count unique users. Sent to **PostHog** (EU).
 
 ### Do NOT declare
-- **App activity / analytics** — the Android app has no analytics SDK.
-- **Crash/diagnostics** — no crash-reporting SDK in the app.
+- **Crash/diagnostics** — no crash-reporting SDK in the app (Play's Android vitals
+  is Google's own collection, not declared by the developer).
 - Name, email, phone, precise/approx location, contacts, financial info, health,
   messages, calendar, files — none collected (no account, no login).
 
