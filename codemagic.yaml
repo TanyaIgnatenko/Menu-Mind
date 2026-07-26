@@ -1,0 +1,66 @@
+# Codemagic CI — builds, signs and ships the iOS app to TestFlight / App Store
+# from the cloud, so no Mac is needed locally.
+#
+# ── One-time setup in the Codemagic web UI (https://codemagic.io) ────────────
+#   1. Add this repository (GitHub) as an application.
+#   2. Team / Integrations → App Store Connect: create an API key in App Store
+#      Connect (Users and Access → Integrations → App Store Connect API →
+#      generate a key with "App Manager" role), download the .p8, and add it to
+#      Codemagic. Name the integration EXACTLY:  CodemagicASCKey
+#      (or rename it below to match).
+#   3. In App Store Connect, create the app with bundle id  com.menumind.mobile
+#      (Codemagic can also register the bundle id + provisioning automatically
+#      via the API key — automatic signing below handles the profiles).
+#   4. Push to the branch, then hit "Start new build" → workflow "ios-release".
+#
+# The build number auto-increments per Codemagic build, so every TestFlight
+# upload is unique without manual bumps.
+# ─────────────────────────────────────────────────────────────────────────────
+
+workflows:
+  ios-release:
+    name: iOS release (TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    # The Flutter app lives in the mobile/ subdirectory of this repo.
+    working_directory: mobile
+
+    integrations:
+      app_store_connect: CodemagicASCKey
+
+    environment:
+      ios_signing:
+        distribution_type: app_store          # App Store / TestFlight distribution
+        bundle_identifier: com.menumind.mobile
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        script: find . -name "Podfile" -execdir pod install \;
+
+      - name: Set up code signing (provisioning profiles)
+        script: xcode-project use-profiles
+
+      - name: Build signed IPA
+        script: |
+          flutter build ipa --release \
+            --build-name=1.0.0 \
+            --build-number=$PROJECT_BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true            # ships each build to TestFlight
+        # To auto-submit to App Store review once TestFlight is verified, add:
+        # submit_to_app_store: false

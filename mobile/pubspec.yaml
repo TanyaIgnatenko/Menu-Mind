@@ -51,7 +51,7 @@ flutter:
 # `ios: true`, then re-run `dart run flutter_launcher_icons`.
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
   image_path: "assets/icon/cam_on_gradient.png"
   adaptive_icon_background: "assets/icon/app_icon_bg.png"
   adaptive_icon_foreground: "assets/icon/cam_fg.png"
@@ -67,7 +67,7 @@ flutter_native_splash:
   color: "#FFFBF7"
   color_dark: "#FFFBF7"
   android: true
-  ios: false
+  ios: true
   web: false
   android_12:
     color: "#FFFBF7"
