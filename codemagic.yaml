@@ -29,9 +29,6 @@ workflows:
       app_store_connect: CodemagicASCKey
 
     environment:
-      ios_signing:
-        distribution_type: app_store          # App Store / TestFlight distribution
-        bundle_identifier: com.menumind.mobile
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -43,7 +40,23 @@ workflows:
       - name: Install CocoaPods dependencies
         script: find . -name "Podfile" -execdir pod install \;
 
-      - name: Set up code signing (provisioning profiles)
+      # Manual signing: fetch OR create the App Store distribution certificate
+      # and provisioning profile (the automatic ios_signing block didn't create
+      # them on a fresh account — --create forces creation). Credentials come
+      # from the CodemagicASCKey integration above.
+      - name: Set up keychain
+        script: keychain initialize
+
+      - name: Fetch or create signing files
+        script: |
+          app-store-connect fetch-signing-files "com.menumind.mobile" \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Add certificates to keychain
+        script: keychain add-certificates
+
+      - name: Apply provisioning profiles to the Xcode project
         script: xcode-project use-profiles
 
       - name: Build signed IPA
