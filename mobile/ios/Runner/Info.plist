@@ -8,6 +8,8 @@
 		<string>MenuMind uses the camera to photograph restaurant menus so it can translate them.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>MenuMind lets you choose a menu photo from your library to translate.</string>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
