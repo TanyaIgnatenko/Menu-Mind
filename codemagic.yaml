@@ -47,10 +47,17 @@ workflows:
       - name: Set up keychain
         script: keychain initialize
 
+      # Creating a distribution certificate needs a private key (for the CSR).
+      # On a fresh account there is none, so generate one here and hand it to
+      # fetch-signing-files via --certificate-key.
+      - name: Generate a private key for the distribution certificate
+        script: openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out /tmp/dist_cert_key.pem
+
       - name: Fetch or create signing files
         script: |
           app-store-connect fetch-signing-files "com.menumind.mobile" \
             --type IOS_APP_STORE \
+            --certificate-key=@file:/tmp/dist_cert_key.pem \
             --create
 
       - name: Add certificates to keychain
