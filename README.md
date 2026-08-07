@@ -2,6 +2,8 @@
 
 > AI-powered menu visualization & translation — photograph any restaurant menu and instantly see a photorealistic image of every dish plus an English translation.
 
+**Get the app:** [Google Play](https://play.google.com/store/apps/details?id=com.menumind.mobile&pcampaignid=web_share) · [App Store](https://apps.apple.com/de/app/menumind-menu-translator/id6795102776?l=en-GB)
+
 **Live demo:** https://menu-mind-tawny.vercel.app
 
 Traveling abroad, you open a menu and recognize nothing. MenuMind lets you photograph any restaurant menu and instantly see every dish — translated into English and rendered as a photorealistic AI image — so you actually know what you're about to order.
@@ -23,7 +25,7 @@ Traveling abroad, you open a menu and recognize nothing. MenuMind lets you photo
 - 🗂️ **Categorized menu + dish detail** — dishes grouped by section (e.g. _Antipasti_, _Mains_); tap any dish for its photo, description, dietary info, nutrition and fun facts.
 - 🕘 **History** — past scans are saved locally; rename, reopen or delete them.
 - 🔗 **Share** — share a translated menu via link or QR code.
-- 📱 **Cross-platform** — responsive web app **and** a native Android app: drag-and-drop or webcam capture on web, camera/gallery on mobile.
+- 📱 **Cross-platform** — responsive web app **and** native Android & iOS apps: drag-and-drop or webcam capture on web, camera/gallery on mobile.
 
 ## Tech stack
 
