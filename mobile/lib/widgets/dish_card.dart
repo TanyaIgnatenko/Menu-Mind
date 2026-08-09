@@ -12,7 +12,23 @@ class DishCard extends StatelessWidget {
   final Dish dish;
   final ApiService api;
 
-  const DishCard({super.key, required this.dish, required this.api});
+  /// Menu identity + this dish's index, so the dish screen can keep polling for
+  /// the enrichment pass (about + nutrition) that may still be in flight.
+  final String menuId;
+  final int index;
+
+  /// Whether the menu was already fully processed when this card was built —
+  /// tells the dish screen not to wait for enrichment that is never coming.
+  final bool menuSettled;
+
+  const DishCard({
+    super.key,
+    required this.dish,
+    required this.api,
+    required this.menuId,
+    required this.index,
+    required this.menuSettled,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +47,15 @@ class DishCard extends StatelessWidget {
             Analytics.capture('dish_opened', {'dish_name': name});
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => DishScreen(dish: dish, api: api)),
+              MaterialPageRoute(
+                builder: (_) => DishScreen(
+                  dish: dish,
+                  api: api,
+                  menuId: menuId,
+                  dishIndex: index,
+                  menuSettled: menuSettled,
+                ),
+              ),
             );
           },
           child: Container(

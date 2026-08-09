@@ -114,7 +114,13 @@ class _MenuScreenState extends State<MenuScreen> {
                       for (final cat in categories) ...[
                         _categoryHeader(cat, byCategory[cat]!.length),
                         for (final dish in byCategory[cat]!)
-                          DishCard(dish: dish, api: widget.api),
+                          DishCard(
+                            dish: dish,
+                            api: widget.api,
+                            menuId: _menu.id,
+                            index: _menu.dishes.indexOf(dish),
+                            menuSettled: _menu.allImagesResolved,
+                          ),
                         const SizedBox(height: 8),
                       ],
                       if (categories.isEmpty)

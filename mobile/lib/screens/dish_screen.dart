@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/menu.dart';
 import '../services/api_service.dart';
@@ -7,16 +9,93 @@ import '../theme/app_theme.dart';
 import '../widgets/stripe_placeholder.dart';
 import '../widgets/diet_chip.dart';
 
-class DishScreen extends StatelessWidget {
+class DishScreen extends StatefulWidget {
   final Dish dish;
   final ApiService api;
 
-  const DishScreen({super.key, required this.dish, required this.api});
+  /// Identity of this dish within its menu, so the screen can keep polling for
+  /// the second-pass enrichment (about + nutrition) that may still be in flight
+  /// when the dish is opened.
+  final String menuId;
+  final int dishIndex;
 
+  /// Whether the whole menu was already finished (all images resolved) at the
+  /// moment this dish was opened. If so, no more enrichment is coming and we
+  /// must not show a perpetual loader for a dish whose enrichment simply failed.
+  final bool menuSettled;
+
+  const DishScreen({
+    super.key,
+    required this.dish,
+    required this.api,
+    required this.menuId,
+    required this.dishIndex,
+    required this.menuSettled,
+  });
+
+  @override
+  State<DishScreen> createState() => _DishScreenState();
+}
+
+class _DishScreenState extends State<DishScreen> {
   static const _heroHeight = 365.0;
   static const _sheetOverlap = 28.0;
 
-  String get _name => dish.nameEnglish.isNotEmpty ? dish.nameEnglish : dish.nameOriginal;
+  late Dish _dish;
+
+  /// True while we still expect the enrichment pass to deliver about/nutrition.
+  /// Drives both the polling loop and the shimmer placeholders.
+  bool _expectMore = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _dish = widget.dish;
+    // Only wait for more if this dish isn't enriched yet AND the menu was still
+    // being processed when it was opened (otherwise nothing more is coming).
+    if (!_isEnriched(_dish) && !widget.menuSettled) {
+      _expectMore = true;
+      _startPolling();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  bool _isEnriched(Dish d) => d.about.isNotEmpty && d.nutrition != null;
+
+  /// Show shimmer placeholders while enrichment is still expected and the field
+  /// hasn't arrived yet.
+  bool get _showAboutLoader => _expectMore && _dish.about.isEmpty;
+  bool get _showNutritionLoader => _expectMore && _dish.nutrition == null;
+
+  void _startPolling() {
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      try {
+        final menu = await widget.api.getMenu(widget.menuId);
+        if (!mounted) return;
+        if (widget.dishIndex < menu.dishes.length) {
+          final updated = menu.dishes[widget.dishIndex];
+          setState(() => _dish = updated);
+          // Stop once enriched, or once the whole menu is done (no more coming).
+          if (_isEnriched(updated) || menu.allImagesResolved) {
+            _timer?.cancel();
+            setState(() => _expectMore = false);
+          }
+        } else if (menu.allImagesResolved) {
+          _timer?.cancel();
+          setState(() => _expectMore = false);
+        }
+      } catch (_) {}
+    });
+  }
+
+  String get _name =>
+      _dish.nameEnglish.isNotEmpty ? _dish.nameEnglish : _dish.nameOriginal;
 
   @override
   Widget build(BuildContext context) {
@@ -72,17 +151,17 @@ class DishScreen extends StatelessWidget {
 
   void _share() {
     final buffer = StringBuffer(_name);
-    if (dish.descriptionEnglish.isNotEmpty) {
-      buffer.write('\n\n${dish.descriptionEnglish}');
+    if (_dish.descriptionEnglish.isNotEmpty) {
+      buffer.write('\n\n${_dish.descriptionEnglish}');
     }
     Share.share(buffer.toString(), subject: _name);
   }
 
   // ── Hero photo ───────────────────────────────────────────────────────────────
   Widget _hero() {
-    if (dish.imageReady) {
+    if (_dish.imageReady) {
       return CachedNetworkImage(
-        imageUrl: api.imageUrl(dish.imageUrl!),
+        imageUrl: widget.api.imageUrl(_dish.imageUrl!),
         fit: BoxFit.cover,
         width: double.infinity,
         fadeInDuration: const Duration(milliseconds: 250),
@@ -90,17 +169,21 @@ class DishScreen extends StatelessWidget {
         errorWidget: (_, __, ___) => const FailedPlaceholder(large: true),
       );
     }
-    if (dish.imagePending) return const GeneratingPlaceholder();
+    if (_dish.imagePending) return const GeneratingPlaceholder();
     return const FailedPlaceholder(large: true);
   }
 
   // ── Info sheet ───────────────────────────────────────────────────────────────
   Widget _sheet() {
-    final category = dish.categoryEnglish.isNotEmpty ? dish.categoryEnglish : dish.category;
-    final showOriginal = dish.nameOriginal.isNotEmpty && dish.nameOriginal != _name;
+    final category =
+        _dish.categoryEnglish.isNotEmpty ? _dish.categoryEnglish : _dish.category;
+    final showOriginal =
+        _dish.nameOriginal.isNotEmpty && _dish.nameOriginal != _name;
 
-    final tags = dish.dietaryTags.map(describeTag).whereType<DietTag>().toList();
-    final allergens = tags.where((t) => t.kind == ChipKind.allergen || t.kind == ChipKind.caution).toList();
+    final tags = _dish.dietaryTags.map(describeTag).whereType<DietTag>().toList();
+    final allergens = tags
+        .where((t) => t.kind == ChipKind.allergen || t.kind == ChipKind.caution)
+        .toList();
     final positives = tags.where((t) => t.kind == ChipKind.positive).toList();
 
     return Container(
@@ -138,8 +221,8 @@ class DishScreen extends StatelessWidget {
                     if (category.isNotEmpty)
                       DietChip(DietTag(category, ChipKind.category)),
                     const Spacer(),
-                    if (dish.price.isNotEmpty)
-                      Text(dish.price, style: AppText.priceLarge),
+                    if (_dish.price.isNotEmpty)
+                      Text(_dish.price, style: AppText.priceLarge),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -147,7 +230,7 @@ class DishScreen extends StatelessWidget {
                 if (showOriginal) ...[
                   const SizedBox(height: 4),
                   Text(
-                    dish.nameOriginal,
+                    _dish.nameOriginal,
                     style: const TextStyle(
                       fontFamily: AppTheme.fontFamily,
                       fontSize: 13,
@@ -158,16 +241,16 @@ class DishScreen extends StatelessWidget {
                 ],
 
                 // Menu description (as written) + its translation.
-                if (dish.descriptionEnglish.isNotEmpty ||
-                    dish.descriptionOriginal.isNotEmpty) ...[
+                if (_dish.descriptionEnglish.isNotEmpty ||
+                    _dish.descriptionOriginal.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  if (dish.descriptionEnglish.isNotEmpty)
-                    Text(dish.descriptionEnglish, style: AppText.bodySmall),
-                  if (dish.descriptionOriginal.isNotEmpty &&
-                      dish.descriptionOriginal != dish.descriptionEnglish) ...[
+                  if (_dish.descriptionEnglish.isNotEmpty)
+                    Text(_dish.descriptionEnglish, style: AppText.bodySmall),
+                  if (_dish.descriptionOriginal.isNotEmpty &&
+                      _dish.descriptionOriginal != _dish.descriptionEnglish) ...[
                     const SizedBox(height: 3),
                     Text(
-                      dish.descriptionOriginal,
+                      _dish.descriptionOriginal,
                       style: const TextStyle(
                         fontFamily: AppTheme.fontFamily,
                         fontSize: 13,
@@ -178,12 +261,18 @@ class DishScreen extends StatelessWidget {
                   ],
                 ],
 
-                // About this dish (AI-generated narrative).
-                if (dish.about.isNotEmpty) ...[
+                // About this dish (AI-generated narrative) — real, or a loading
+                // placeholder while the enrichment pass is still in flight.
+                if (_dish.about.isNotEmpty) ...[
                   _divider(),
                   const _Eyebrow('About this dish'),
                   const SizedBox(height: 7),
-                  Text(dish.about, style: AppText.bodySmall),
+                  Text(_dish.about, style: AppText.bodySmall),
+                ] else if (_showAboutLoader) ...[
+                  _divider(),
+                  const _Eyebrow('About this dish'),
+                  const SizedBox(height: 9),
+                  const _AboutLoading(),
                 ],
 
                 // Dietary information.
@@ -211,12 +300,12 @@ class DishScreen extends StatelessWidget {
                   ),
                 ],
 
-                // Nutrition.
-                if (dish.nutrition != null) ...[
+                // Nutrition — real, or a loading placeholder while enrichment runs.
+                if (_dish.nutrition != null) ...[
                   _divider(),
                   const _Eyebrow('Nutrition · per serving'),
                   const SizedBox(height: 10),
-                  _NutritionRow(nutrition: dish.nutrition!),
+                  _NutritionRow(nutrition: _dish.nutrition!),
                   const SizedBox(height: 10),
                   const Text(
                     'Values are AI estimates and may vary. Not for medical decisions.',
@@ -227,6 +316,11 @@ class DishScreen extends StatelessWidget {
                       height: 1.4,
                     ),
                   ),
+                ] else if (_showNutritionLoader) ...[
+                  _divider(),
+                  const _Eyebrow('Nutrition · per serving'),
+                  const SizedBox(height: 10),
+                  const _NutritionLoading(),
                 ],
               ],
             ),
@@ -250,6 +344,87 @@ class _Eyebrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(text.toUpperCase(), style: AppText.eyebrow);
+  }
+}
+
+// ── Enrichment loading placeholders ────────────────────────────────────────────
+// Shown while the second-pass enrichment (about + nutrition) is still generating.
+// Same warm shimmer as the dish-photo placeholder so the whole screen reads as
+// "still loading" with one visual language.
+
+const _shimmerPeriod = Duration(milliseconds: 1600);
+const _shimmerBase = Color(0xFFEFE7DC);
+const _shimmerHighlight = Color(0xFFFBF7F1);
+
+/// Three shimmering text lines standing in for the "about" paragraph.
+class _AboutLoading extends StatelessWidget {
+  const _AboutLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      period: _shimmerPeriod,
+      baseColor: _shimmerBase,
+      highlightColor: _shimmerHighlight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          _ShimmerBar(),
+          SizedBox(height: 8),
+          _ShimmerBar(),
+          SizedBox(height: 8),
+          _ShimmerBar(width: 180),
+        ],
+      ),
+    );
+  }
+}
+
+/// Four shimmering tiles standing in for the nutrition row.
+class _NutritionLoading extends StatelessWidget {
+  const _NutritionLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      period: _shimmerPeriod,
+      baseColor: _shimmerBase,
+      highlightColor: _shimmerHighlight,
+      child: Row(
+        children: [
+          for (var i = 0; i < 4; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(
+              child: Container(
+                height: 58,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A single rounded bar for the shimmering text lines.
+class _ShimmerBar extends StatelessWidget {
+  final double? width;
+  const _ShimmerBar({this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width ?? double.infinity,
+      height: 11,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
   }
 }
 
