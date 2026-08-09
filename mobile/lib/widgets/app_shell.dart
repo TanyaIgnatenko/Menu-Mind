@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/scan_screen.dart';
 import '../screens/history_screen.dart';
+import '../screens/settings_screen.dart';
 import '../theme/app_theme.dart';
 import 'camera_glyph.dart';
 
@@ -32,7 +33,11 @@ class AppShellState extends State<AppShell> {
       backgroundColor: AppColors.canvas,
       body: IndexedStack(
         index: _index,
-        children: [const ScanScreen(), HistoryScreen(key: _historyKey)],
+        children: [
+          const ScanScreen(),
+          HistoryScreen(key: _historyKey),
+          const SettingsScreen(),
+        ],
       ),
       bottomNavigationBar: AppBottomNav(
         index: _index,
@@ -73,6 +78,12 @@ class AppBottomNav extends StatelessWidget {
             icon: Icons.history_rounded,
             label: 'History',
             onTap: () => onTap(1),
+          ),
+          _NavItem(
+            active: index == 2,
+            icon: Icons.settings_rounded,
+            label: 'Settings',
+            onTap: () => onTap(2),
           ),
         ],
       ),

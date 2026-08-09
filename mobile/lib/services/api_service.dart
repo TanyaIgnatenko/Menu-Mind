@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import '../app_version.dart';
 import '../models/menu.dart';
 
 const _baseUrl = 'https://menu-mind-production-559d.up.railway.app/api/v1';
@@ -58,6 +59,58 @@ class ApiService {
     debugPrint('[uploadMenu] unexpected status=${response.statusCode} '
         'data=${response.data}');
     throw ApiException(_errorMessage(response.data));
+  }
+
+  /// Submit in-app feedback. The backend emails it to the support inbox, with
+  /// any [attachmentPaths] (screenshots) attached to the message.
+  Future<void> submitFeedback({
+    required String message,
+    required String replyTo,
+    List<String> attachmentPaths = const [],
+    String? deviceId,
+  }) async {
+    final formData = FormData.fromMap({
+      'message': message,
+      'reply_to': replyTo,
+      'platform': 'mobile',
+      'app_version': kAppVersion,
+      // Multiple parts share the field name 'attachments' → FastAPI collects
+      // them into a list[UploadFile].
+      'attachments': [
+        for (final path in attachmentPaths)
+          await MultipartFile.fromFile(
+            path,
+            filename: path.split(Platform.pathSeparator).last,
+            contentType: _imageMediaType(path),
+          ),
+      ],
+    });
+
+    try {
+      await _dio.post(
+        '/feedback',
+        data: formData,
+        options: Options(
+          sendTimeout: const Duration(minutes: 1),
+          headers: deviceId != null ? {'X-Device-Id': deviceId} : null,
+        ),
+      );
+    } on DioException catch (e) {
+      debugPrint('[submitFeedback] DioException: type=${e.type} '
+          'status=${e.response?.statusCode} data=${e.response?.data}');
+      throw ApiException(_friendlyError(e));
+    }
+  }
+
+  /// Best-effort image content type from a file extension, so the email
+  /// attaches the screenshot with a sensible MIME type.
+  DioMediaType? _imageMediaType(String path) {
+    final p = path.toLowerCase();
+    if (p.endsWith('.png')) return DioMediaType('image', 'png');
+    if (p.endsWith('.webp')) return DioMediaType('image', 'webp');
+    if (p.endsWith('.heic')) return DioMediaType('image', 'heic');
+    if (p.endsWith('.jpg') || p.endsWith('.jpeg')) return DioMediaType('image', 'jpeg');
+    return null;
   }
 
   Future<Menu> getMenu(String menuId) async {
