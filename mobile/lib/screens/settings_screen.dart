@@ -78,7 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsRow(
                     leading: Text(lang.flag, style: const TextStyle(fontSize: 24)),
                     title: lang.name,
-                    subtitle: 'Dish names, descriptions & nutrition',
+                    subtitle: 'Dish names, descriptions & details',
                     onTap: _pickLanguage,
                   ),
                   const SizedBox(height: 24),
