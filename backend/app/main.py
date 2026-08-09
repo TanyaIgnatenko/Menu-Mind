@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import health, menus
+from app.api import feedback, health, menus
 from app.config import get_settings
 from app.exceptions import register_exception_handlers
 from app.services.image_storage import ensure_storage_dir
@@ -64,6 +64,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix=settings.api_v1_prefix)
     app.include_router(menus.router, prefix=settings.api_v1_prefix)
+    app.include_router(feedback.router, prefix=settings.api_v1_prefix)
 
     return app
 

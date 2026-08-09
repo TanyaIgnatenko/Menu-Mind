@@ -68,6 +68,16 @@ class Settings(BaseSettings):
     posthog_api_key: str = ""
     posthog_host: str = "https://eu.i.posthog.com"
 
+    # Feedback email (Gmail SMTP). The /feedback endpoint emails the message to
+    # `feedback_to` using a Gmail account + App Password (not the real password;
+    # generate one at https://myaccount.google.com/apppasswords with 2FA on).
+    # If `gmail_app_password` is empty, /feedback just logs the message (and it
+    # still lands in PostHog) instead of sending — so the app keeps working
+    # before the secret is configured.
+    gmail_address: str = ""
+    gmail_app_password: str = ""
+    feedback_to: str = ""  # recipient; defaults to gmail_address when empty
+
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "https://menu-mind-tawny.vercel.app"]
 
