@@ -47,6 +47,14 @@ export default function DishPage() {
   if (missing) notFound();
 
   const dish = menu?.dishes[dishIndex];
+  // Enrichment (about + nutrition) may still be streaming while the menu isn't
+  // fully settled — show shimmer placeholders for those sections until it lands.
+  const enrichmentPending = menu
+    ? menu.status === "extracting" ||
+      menu.dishes.some(
+        (d) => d.image_status !== "ready" && d.image_status !== "failed",
+      )
+    : false;
 
   return (
     <AppShell active="scan">
@@ -63,7 +71,11 @@ export default function DishPage() {
           <LoadingOrbit caption="Loading dish…" />
         ) : dish ? (
           <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
-            <DishDetailContent dish={dish} variant="page" />
+            <DishDetailContent
+              dish={dish}
+              variant="page"
+              enrichmentPending={enrichmentPending}
+            />
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-surface p-8 text-center shadow-card">

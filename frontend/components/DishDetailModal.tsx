@@ -14,9 +14,11 @@ import { DishDetailContent } from "./DishDetailContent";
 export function DishDetailModal({
   dish,
   onClose,
+  enrichmentPending = false,
 }: {
   dish: Dish;
   onClose: () => void;
+  enrichmentPending?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +75,12 @@ export function DishDetailModal({
         tabIndex={-1}
         className="relative z-10 flex h-[520px] max-h-[92dvh] w-full max-w-[820px] overflow-hidden rounded-[20px] bg-surface shadow-[0_30px_80px_rgba(0,0,0,0.3)] outline-none"
       >
-        <DishDetailContent dish={dish} variant="modal" onClose={onClose} />
+        <DishDetailContent
+          dish={dish}
+          variant="modal"
+          onClose={onClose}
+          enrichmentPending={enrichmentPending}
+        />
       </div>
     </div>
   );

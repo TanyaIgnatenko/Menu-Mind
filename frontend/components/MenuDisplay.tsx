@@ -42,6 +42,18 @@ interface DishRef {
 export function MenuDisplay({ menu }: Props) {
   const [active, setActive] = useState<Set<string>>(new Set());
 
+  // While the menu isn't fully settled (still extracting or images generating),
+  // the second-pass enrichment (about + nutrition) may still be arriving — tell
+  // the dish detail to show shimmer placeholders for those sections.
+  const enrichmentPending = useMemo(
+    () =>
+      menu.status === "extracting" ||
+      menu.dishes.some(
+        (d) => d.image_status !== "ready" && d.image_status !== "failed",
+      ),
+    [menu],
+  );
+
   const indexed: DishRef[] = useMemo(
     () => menu.dishes.map((dish, index) => ({ dish, index })),
     [menu.dishes],
@@ -161,6 +173,7 @@ export function MenuDisplay({ menu }: Props) {
                 menuId={menu.id}
                 index={index}
                 variant="row"
+                enrichmentPending={enrichmentPending}
               />
             ))}
           </div>
@@ -173,6 +186,7 @@ export function MenuDisplay({ menu }: Props) {
                 menuId={menu.id}
                 index={index}
                 variant="card"
+                enrichmentPending={enrichmentPending}
               />
             ))}
           </div>

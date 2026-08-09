@@ -1,12 +1,12 @@
 import Link from "next/link";
 
-import { Camera, History } from "lucide-react";
+import { Camera, History, Settings } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 import { BrandMark } from "./BrandMark";
 
-type NavKey = "scan" | "history";
+type NavKey = "scan" | "history" | "settings";
 
 interface NavDef {
   key: NavKey;
@@ -18,6 +18,7 @@ interface NavDef {
 const NAV: NavDef[] = [
   { key: "scan", label: "Scan menu", href: "/", icon: Camera },
   { key: "history", label: "History", href: "/history", icon: History },
+  { key: "settings", label: "Settings", href: "/settings", icon: Settings },
 ];
 
 /**

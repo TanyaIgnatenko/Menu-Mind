@@ -76,9 +76,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // ── API calls ─────────────────────────────────────────────────────────────────
 
-export async function uploadMenu(file: File, deviceId?: string): Promise<Menu> {
+export async function uploadMenu(
+  file: File,
+  deviceId?: string,
+  language?: string,
+): Promise<Menu> {
   const formData = new FormData();
   formData.append("file", file);
+  // Target translation language (ISO code). Backend defaults to English.
+  if (language) formData.append("language", language);
 
   // Forward the caller's anonymous analytics id so the backend's server-side
   // scan events attribute to the same person (scans-per-user).
@@ -92,6 +98,36 @@ export async function uploadMenu(file: File, deviceId?: string): Promise<Menu> {
   });
 
   return handleResponse<Menu>(response);
+}
+
+/**
+ * Submit in-app feedback. The backend emails it to the support inbox, with any
+ * `attachments` (screenshots) attached to the message.
+ */
+export async function submitFeedback(opts: {
+  message: string;
+  replyTo: string;
+  attachments?: File[];
+  deviceId?: string;
+}): Promise<void> {
+  const { message, replyTo, attachments = [], deviceId } = opts;
+  const formData = new FormData();
+  formData.append("message", message);
+  formData.append("reply_to", replyTo);
+  formData.append("platform", "web");
+  formData.append("app_version", "1.0");
+  for (const f of attachments) formData.append("attachments", f);
+
+  const headers: Record<string, string> = {};
+  if (deviceId) headers["X-Device-Id"] = deviceId;
+
+  const response = await fetch(`${API_BASE}/feedback`, {
+    method: "POST",
+    body: formData,
+    headers,
+  });
+
+  await handleResponse<unknown>(response);
 }
 
 export async function getMenu(menuId: string): Promise<Menu> {

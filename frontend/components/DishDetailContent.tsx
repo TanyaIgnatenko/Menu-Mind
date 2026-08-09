@@ -80,10 +80,14 @@ export function DishDetailContent({
   dish,
   variant = "page",
   onClose,
+  enrichmentPending = false,
 }: {
   dish: Dish;
   variant?: "modal" | "page";
   onClose?: () => void;
+  /** The second-pass enrichment (about + nutrition) may still be arriving —
+   * show shimmer placeholders for those sections until it does. */
+  enrichmentPending?: boolean;
 }) {
   const tags = dish.dietary_tags ?? [];
   const allergens = tags.filter((t) => t.startsWith("contains_"));
@@ -142,14 +146,25 @@ export function DishDetailContent({
           </div>
         )}
 
-        {dish.about && (
+        {dish.about ? (
           <div className="mt-4 space-y-1.5">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-2">
               About this dish
             </h3>
             <p className="text-sm leading-relaxed text-body">{dish.about}</p>
           </div>
-        )}
+        ) : enrichmentPending ? (
+          <div className="mt-4 space-y-1.5">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-2">
+              About this dish
+            </h3>
+            <div className="space-y-2 pt-1" aria-hidden="true">
+              <div className="shimmer h-3 w-full rounded" />
+              <div className="shimmer h-3 w-full rounded" />
+              <div className="shimmer h-3 w-2/3 rounded" />
+            </div>
+          </div>
+        ) : null}
 
         {tags.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
@@ -172,15 +187,22 @@ export function DishDetailContent({
           </div>
         )}
 
-        <div className="mt-5">
-          <NutritionTiles dish={dish} />
-        </div>
-
-        {dish.nutrition && (
-          <p className="mt-5 text-[11px] text-muted-2">
-            AI estimates — may vary. For allergies, verify with the restaurant.
-          </p>
-        )}
+        {dish.nutrition ? (
+          <>
+            <div className="mt-5">
+              <NutritionTiles dish={dish} />
+            </div>
+            <p className="mt-5 text-[11px] text-muted-2">
+              AI estimates — may vary. For allergies, verify with the restaurant.
+            </p>
+          </>
+        ) : enrichmentPending ? (
+          <div className="mt-5 grid grid-cols-4 gap-2" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="shimmer h-[62px] rounded-xl" />
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );

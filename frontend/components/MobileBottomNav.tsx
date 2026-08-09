@@ -1,14 +1,15 @@
 import Link from "next/link";
 
-import { Camera, History } from "lucide-react";
+import { Camera, History, Settings } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type NavKey = "scan" | "history";
+type NavKey = "scan" | "history" | "settings";
 
 const ITEMS: { key: NavKey; label: string; href: string; icon: typeof Camera }[] = [
   { key: "scan", label: "Scan", href: "/", icon: Camera },
   { key: "history", label: "History", href: "/history", icon: History },
+  { key: "settings", label: "Settings", href: "/settings", icon: Settings },
 ];
 
 /**

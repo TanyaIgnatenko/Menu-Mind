@@ -17,6 +17,8 @@ interface Props {
   index: number;
   /** "card" = desktop grid tile; "row" = mobile-web list row. */
   variant?: "card" | "row";
+  /** Menu enrichment (about + nutrition) is still streaming in. */
+  enrichmentPending?: boolean;
 }
 
 const POSITIVE_LABELS: Record<string, string> = {
@@ -59,7 +61,13 @@ function DishImage({ dish, className }: { dish: Dish; className?: string }) {
   );
 }
 
-export function DishCard({ dish, menuId, index, variant = "card" }: Props) {
+export function DishCard({
+  dish,
+  menuId,
+  index,
+  variant = "card",
+  enrichmentPending = false,
+}: Props) {
   const router = useRouter();
   const isDesktop = useIsDesktop();
   const [modalOpen, setModalOpen] = useState(false);
@@ -76,7 +84,11 @@ export function DishCard({ dish, menuId, index, variant = "card" }: Props) {
   }
 
   const modal = modalOpen && (
-    <DishDetailModal dish={dish} onClose={() => setModalOpen(false)} />
+    <DishDetailModal
+      dish={dish}
+      enrichmentPending={enrichmentPending}
+      onClose={() => setModalOpen(false)}
+    />
   );
 
   if (variant === "row") {

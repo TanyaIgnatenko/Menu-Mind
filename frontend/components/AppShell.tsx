@@ -6,7 +6,7 @@ import { AppSidebar } from "./AppSidebar";
 import { BrandMark } from "./BrandMark";
 import { MobileBottomNav } from "./MobileBottomNav";
 
-type NavKey = "scan" | "history";
+type NavKey = "scan" | "history" | "settings";
 
 /**
  * App layout: a persistent left sidebar on desktop (≥ nav breakpoint), and a
