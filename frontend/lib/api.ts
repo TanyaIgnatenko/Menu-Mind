@@ -115,7 +115,7 @@ export async function submitFeedback(opts: {
   formData.append("message", message);
   formData.append("reply_to", replyTo);
   formData.append("platform", "web");
-  formData.append("app_version", "1.0");
+  formData.append("app_version", "1.1");
   for (const f of attachments) formData.append("attachments", f);
 
   const headers: Record<string, string> = {};

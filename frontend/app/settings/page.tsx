@@ -11,7 +11,7 @@ import { LanguagePicker } from "@/components/LanguagePicker";
 import { DEFAULT_LANGUAGE, languageByCode } from "@/lib/languages";
 import { getLanguageCode, setLanguageCode } from "@/lib/settings";
 
-const APP_VERSION = "1.0";
+const APP_VERSION = "1.1";
 
 export default function SettingsPage() {
   const [langCode, setLangCode] = useState(DEFAULT_LANGUAGE);
