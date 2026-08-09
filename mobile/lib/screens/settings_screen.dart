@@ -36,18 +36,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _settings.setLanguageCode(picked);
     if (!mounted) return;
     setState(() => _langCode = picked);
-    // Honest note: the backend still returns English regardless of this choice.
-    if (picked != 'en') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Saved — menus are still translated to English for now.',
-          ),
-          backgroundColor: AppColors.ink,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    // Applies to the next scan (already-saved menus keep their language).
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Your next scan will be translated to ${languageByCode(picked).name}.'),
+        backgroundColor: AppColors.ink,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override

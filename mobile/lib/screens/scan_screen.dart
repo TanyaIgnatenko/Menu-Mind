@@ -8,6 +8,7 @@ import '../services/analytics.dart';
 import '../services/api_service.dart';
 import '../services/history_service.dart';
 import '../services/menu_photo_store.dart';
+import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/wordmark.dart';
 import '../widgets/stripe_placeholder.dart';
@@ -25,6 +26,7 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
   final _api = ApiService();
   final _history = HistoryService();
+  final _settings = SettingsService();
   final _picker = ImagePicker();
 
   bool _loading = false;
@@ -95,7 +97,12 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
       // (OCR + translation) in the background. Poll until it's ready — the
       // loading screen stays up meanwhile — so the slow work can't hit the
       // gateway timeout (504).
-      Menu menu = await _api.uploadMenu(file, deviceId: Analytics.distinctId);
+      final language = await _settings.getLanguageCode();
+      Menu menu = await _api.uploadMenu(
+        file,
+        deviceId: Analytics.distinctId,
+        language: language,
+      );
       final deadline = DateTime.now().add(const Duration(minutes: 4));
       while (menu.extractionPending) {
         if (DateTime.now().isAfter(deadline)) {

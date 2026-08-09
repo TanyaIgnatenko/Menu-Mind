@@ -48,16 +48,25 @@ async def _get_record(session: AsyncSession, menu_id: UUID) -> MenuRecord | None
     return result.scalar_one_or_none()
 
 
-async def get_cached_menu(db: AsyncSession, image_hash: str) -> Menu | None:
-    """Return a previously extracted menu for this image hash, or None."""
-    result = await db.execute(select(MenuRecord).where(MenuRecord.image_hash == image_hash))
+async def get_cached_menu(
+    db: AsyncSession, image_hash: str, target_language: str = "en"
+) -> Menu | None:
+    """Return a previously extracted menu for this image + target language, or None."""
+    result = await db.execute(
+        select(MenuRecord).where(
+            MenuRecord.image_hash == image_hash,
+            MenuRecord.target_language == target_language,
+        )
+    )
     record = result.scalar_one_or_none()
     if record is None:
         return None
     return _record_to_menu(record)
 
 
-async def save_menu(db: AsyncSession, image_hash: str, menu: MenuCreate) -> Menu:
+async def save_menu(
+    db: AsyncSession, image_hash: str, menu: MenuCreate, target_language: str = "en"
+) -> Menu:
     """Persist an extracted menu. Idempotent: returns existing record on conflict.
 
     cuisine_type and status are stored as top-level keys inside the dishes_json
@@ -70,6 +79,7 @@ async def save_menu(db: AsyncSession, image_hash: str, menu: MenuCreate) -> Menu
     }
     record = MenuRecord(
         image_hash=image_hash,
+        target_language=target_language,
         source_language=menu.source_language,
         restaurant_name=menu.restaurant_name,
         dishes_json=dishes_json,
@@ -80,21 +90,30 @@ async def save_menu(db: AsyncSession, image_hash: str, menu: MenuCreate) -> Menu
         await db.refresh(record)
     except IntegrityError:
         await db.rollback()
-        existing = await get_cached_menu(db, image_hash)
+        existing = await get_cached_menu(db, image_hash, target_language)
         if existing is None:
             raise
         return existing
     return _record_to_menu(record)
 
 
-async def create_pending_menu(db: AsyncSession, image_hash: str) -> Menu:
+async def create_pending_menu(
+    db: AsyncSession, image_hash: str, target_language: str = "en"
+) -> Menu:
     """Create (or reset) a placeholder menu in the 'extracting' state and return
     it immediately, so the POST can respond before the slow OCR + translation.
 
-    If a record for this hash already exists (e.g. a previously 'failed' attempt),
-    it is reset to 'extracting' so the retry re-extracts.
+    Keyed on (image_hash, target_language): the same photo can be re-scanned in a
+    different language and gets its own row. If a record for this pair already
+    exists (e.g. a previously 'failed' attempt), it is reset to 'extracting' so
+    the retry re-extracts.
     """
-    result = await db.execute(select(MenuRecord).where(MenuRecord.image_hash == image_hash))
+    result = await db.execute(
+        select(MenuRecord).where(
+            MenuRecord.image_hash == image_hash,
+            MenuRecord.target_language == target_language,
+        )
+    )
     record = result.scalar_one_or_none()
     pending_json: dict = {"cuisine_type": None, "status": "extracting", "dishes": []}
 
@@ -109,6 +128,7 @@ async def create_pending_menu(db: AsyncSession, image_hash: str) -> Menu:
 
     record = MenuRecord(
         image_hash=image_hash,
+        target_language=target_language,
         source_language="unknown",
         restaurant_name=None,
         dishes_json=pending_json,
@@ -118,9 +138,9 @@ async def create_pending_menu(db: AsyncSession, image_hash: str) -> Menu:
         await db.commit()
         await db.refresh(record)
     except IntegrityError:
-        # Concurrent insert for the same hash — return whatever is there now.
+        # Concurrent insert for the same (hash, language) — return what's there now.
         await db.rollback()
-        existing = await get_cached_menu(db, image_hash)
+        existing = await get_cached_menu(db, image_hash, target_language)
         if existing is None:
             raise
         return existing

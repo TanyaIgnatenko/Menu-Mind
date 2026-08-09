@@ -8,11 +8,11 @@ class AppLanguage {
   const AppLanguage(this.code, this.name, this.endonym, this.flag);
 }
 
-/// Translation targets. English is the default and the only one the backend
-/// currently produces (see [SettingsService]); the rest are stored preferences
-/// awaiting backend re-translation support. This is a broad, travel-oriented
-/// subset of the 100+ languages the model handles — flags are representative
-/// (a language isn't a country), so some share a flag or use a common region.
+/// Translation targets. English is the default; the chosen language is sent with
+/// each scan and the backend translates the menu into it. This is a broad,
+/// travel-oriented subset of the 100+ languages the model handles — flags are
+/// representative (a language isn't a country), so some share a flag or use a
+/// common region. Keep in sync with backend `app/services/languages.py`.
 const kSupportedLanguages = <AppLanguage>[
   AppLanguage('en', 'English', 'English', '🇬🇧'),
   AppLanguage('es', 'Spanish', 'Español', '🇪🇸'),

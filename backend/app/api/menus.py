@@ -3,7 +3,7 @@ import asyncio
 import time
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -24,6 +24,7 @@ from app.services.cache import (
     mark_menu_failed,
 )
 from app.services.extraction import enrich_dishes, extract_menu_from_image
+from app.services.languages import resolve_language
 from app.services.image_generation import (
     generate_images_for_menu,
     mark_menu_images_generating,
@@ -86,7 +87,7 @@ def _get_client_ip(request: Request) -> str:
 
 
 async def _extract_and_generate(
-    menu_id: UUID, processed_bytes: bytes, device_id: str
+    menu_id: UUID, processed_bytes: bytes, device_id: str, language_name: str = "English"
 ) -> None:
     """Background pipeline for one upload: extract the menu (slow OCR +
     translation), then generate dish images.
@@ -123,6 +124,7 @@ async def _extract_and_generate(
         "images_ready": 0,
         "images_failed": 0,
         "cuisine_type": None,
+        "target_language": language_name,
         "image_stored": upload_key is not None,
     }
     outcome = "failed"
@@ -133,7 +135,7 @@ async def _extract_and_generate(
     t_ext = t_start
     try:
         t_ext = time.monotonic()
-        menu_create = await extract_menu_from_image(processed_bytes)
+        menu_create = await extract_menu_from_image(processed_bytes, language_name)
         metrics["primary_extraction_ms"] = int((time.monotonic() - t_ext) * 1000)
         async with session_factory() as session:
             await complete_menu_extraction(session, menu_id, menu_create)
@@ -162,7 +164,7 @@ async def _extract_and_generate(
 
     if outcome == "success" and menu_create is not None:
         # The functions below each manage their own engine/session.
-        img_metrics = await _enrich_and_generate_images(menu_id, menu_create)
+        img_metrics = await _enrich_and_generate_images(menu_id, menu_create, language_name)
         metrics.update(img_metrics)
         metrics["time_to_last_image_ms"] = int((time.monotonic() - t_start) * 1000)
 
@@ -173,7 +175,7 @@ async def _extract_and_generate(
     )
 
 
-async def _run_enrichment(menu_id: UUID, menu_create) -> int | None:  # type: ignore[no-untyped-def]
+async def _run_enrichment(menu_id: UUID, menu_create, language_name: str = "English") -> int | None:  # type: ignore[no-untyped-def]
     """Second pass: about + nutrition (text-only, no image). Runs after the menu
     is already shown (status=ready), so it never blocks the loading spinner.
     Non-fatal — a failure just leaves those fields empty.
@@ -185,7 +187,7 @@ async def _run_enrichment(menu_id: UUID, menu_create) -> int | None:  # type: ig
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     t = time.monotonic()
     try:
-        by_index = await enrich_dishes(menu_create.dishes, menu_create.cuisine_type)
+        by_index = await enrich_dishes(menu_create.dishes, menu_create.cuisine_type, language_name)
         async with session_factory() as session:
             await apply_dish_enrichment(session, menu_id, by_index)
         logger.info("enrichment_complete", menu_id=str(menu_id), enriched=len(by_index))
@@ -197,7 +199,7 @@ async def _run_enrichment(menu_id: UUID, menu_create) -> int | None:  # type: ig
         await engine.dispose()
 
 
-async def _enrich_and_generate_images(menu_id: UUID, menu_create) -> dict[str, object]:  # type: ignore[no-untyped-def]
+async def _enrich_and_generate_images(menu_id: UUID, menu_create, language_name: str = "English") -> dict[str, object]:  # type: ignore[no-untyped-def]
     """Post-extraction priority pipeline (all steps sequential — the per-dish
     image write is only race-free without concurrency):
 
@@ -216,11 +218,11 @@ async def _enrich_and_generate_images(menu_id: UUID, menu_create) -> dict[str, o
     await mark_menu_images_generating(menu_id)
     if n > _FIRST_IMAGE_BATCH:
         r1, f1 = await generate_images_for_menu(menu_id, indices=range(_FIRST_IMAGE_BATCH))
-        enrichment_ms = await _run_enrichment(menu_id, menu_create)
+        enrichment_ms = await _run_enrichment(menu_id, menu_create, language_name)
         r2, f2 = await generate_images_for_menu(menu_id, indices=range(_FIRST_IMAGE_BATCH, n))
         ready, failed = r1 + r2, f1 + f2
     else:
-        enrichment_ms = await _run_enrichment(menu_id, menu_create)
+        enrichment_ms = await _run_enrichment(menu_id, menu_create, language_name)
         ready, failed = await generate_images_for_menu(menu_id)
     return {"enrichment_ms": enrichment_ms, "images_ready": ready, "images_failed": failed}
 
@@ -229,6 +231,7 @@ async def _enrich_and_generate_images(menu_id: UUID, menu_create) -> dict[str, o
 async def create_menu(
     request: Request,
     file: UploadFile,
+    language: str = Form("en"),
     db: AsyncSession = Depends(get_db),
 ) -> Menu:
     """Start menu processing and return a placeholder immediately.
@@ -237,14 +240,20 @@ async def create_menu(
     tasks, so the response returns in well under the gateway timeout. The client
     then polls GET /menus/{id} until `status` becomes 'ready' (or 'failed').
 
-    Idempotent by image hash: re-uploading the same image returns the existing
-    menu (ready or still extracting) without re-processing, and a previously
-    'failed' attempt is re-extracted.
+    `language` is the target translation language (ISO code; defaults to English
+    so clients that don't send it are unchanged). Menus are cached per language,
+    so the same photo can be translated into several languages independently.
+
+    Idempotent by (image hash, language): re-uploading the same image for the same
+    language returns the existing menu without re-processing; a previously 'failed'
+    attempt is re-extracted.
 
     Rate limits (both bypass-able via RATE_LIMIT_ENABLED=false):
       - 5 unique uploads per IP per day
       - 50 unique uploads globally per day
     """
+    target_language, language_name = resolve_language(language)
+
     image_bytes = await file.read()
     if not image_bytes:
         raise InvalidImageError("Empty file uploaded")
@@ -253,10 +262,11 @@ async def create_menu(
 
     # Check cache BEFORE rate limiting — cache hits bypass limits entirely.
     # A 'failed' record is treated as a miss so the retry re-extracts.
-    cached = await get_cached_menu(db, image_hash)
+    cached = await get_cached_menu(db, image_hash, target_language)
     if cached is not None and cached.status != "failed":
         logger.info(
-            "cache_hit", image_hash=image_hash, menu_id=str(cached.id), status=cached.status
+            "cache_hit", image_hash=image_hash, menu_id=str(cached.id),
+            status=cached.status, language=target_language,
         )
         check_and_increment(_get_client_ip(request), is_cache_hit=True)
         return cached
@@ -271,12 +281,14 @@ async def create_menu(
     check_and_increment(_get_client_ip(request), is_cache_hit=False)
 
     # Persist a placeholder and respond immediately; process in the background.
-    pending = await create_pending_menu(db, image_hash)
-    logger.info("scheduling_extraction", menu_id=str(pending.id))
+    pending = await create_pending_menu(db, image_hash, target_language)
+    logger.info("scheduling_extraction", menu_id=str(pending.id), language=target_language)
     # Anonymous per-install id from the client (mobile/web send their PostHog
     # distinct_id) so scan events attribute to a user; fall back to a per-scan id.
     device_id = request.headers.get("x-device-id") or str(pending.id)
-    task = asyncio.create_task(_extract_and_generate(pending.id, processed_bytes, device_id))
+    task = asyncio.create_task(
+        _extract_and_generate(pending.id, processed_bytes, device_id, language_name)
+    )
     _background_tasks.add(task)
     task.add_done_callback(_on_image_gen_done)
 

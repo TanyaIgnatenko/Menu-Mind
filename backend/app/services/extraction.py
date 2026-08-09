@@ -10,16 +10,21 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-EXTRACTION_PROMPT = """You are extracting structured data from a restaurant menu photograph.
+_EXTRACTION_PROMPT_TEMPLATE = """You are extracting structured data from a restaurant menu photograph.
+
+The target translation language is __LANG__. Translate all human-facing text (dish
+names, descriptions, categories) into __LANG__. IMPORTANT: the fields named
+`name_english`, `description_english` and `category_english` are historical names —
+they must hold the __LANG__ translation, NOT necessarily English.
 
 Extract every dish/drink visible on the menu. For each item, provide these fields:
 - name_original: dish name exactly as written on the menu (in source language)
-- name_english: English version of the name. Set this to "" ONLY if name_original is genuinely in English (composed of English words or an English-language menu entry) OR if it already includes an explicit English translation separated by a slash/dash (e.g. "Crema di Pomodoro / Tomato Cream"). LOANWORDS DO NOT COUNT AS ALREADY-ENGLISH: dishes like "Spaghetti alla Carbonara", "Lasagna", "Gnocchi", "Sushi", "Tiramisu", "Pierogi" are Italian/Japanese/Polish names borrowed into English — for these you MUST still provide name_english, either as a clean English translation ("Pasta with Pancetta and Egg") or, when the name has no real English equivalent, simply repeat or transliterate the dish name in name_english so the field is populated. The original may contain the SAME item in several non-English languages (e.g. German + Russian) — in that case give ONE single English translation, do NOT translate each language separately.
+- name_english: __LANG__ version of the name. Set this to "" ONLY if name_original is genuinely already in __LANG__ (composed of __LANG__ words or a __LANG__ menu entry) OR if it already includes an explicit __LANG__ translation separated by a slash/dash (e.g. "Crema di Pomodoro / Tomato Cream"). LOANWORDS DO NOT COUNT AS ALREADY-__LANG__: dishes like "Spaghetti alla Carbonara", "Lasagna", "Gnocchi", "Sushi", "Tiramisu", "Pierogi" are names borrowed from other languages — for these you MUST still provide name_english, either as a clean __LANG__ translation or, when the name has no real __LANG__ equivalent, simply repeat or transliterate the dish name in name_english so the field is populated. The original may contain the SAME item in several languages (e.g. German + Russian) — in that case give ONE single __LANG__ translation, do NOT translate each language separately.
 - description_original: description text from the menu, or empty string if none
-- description_english: ALWAYS provide a clear English description of the dish. If description_original is in another language, translate it to English. If description_original is already in English, copy it here (cleaned up). If there are multiple languages in the original, produce ONE single English version — never concatenate or duplicate translations per language. If the menu has no description for this dish, write a brief 1-sentence English description based on the dish name. This field must NEVER be empty.
+- description_english: ALWAYS provide a clear __LANG__ description of the dish. If description_original is in another language, translate it to __LANG__. If description_original is already in __LANG__, copy it here (cleaned up). If there are multiple languages in the original, produce ONE single __LANG__ version — never concatenate or duplicate translations per language. If the menu has no description for this dish, write a brief 1-sentence __LANG__ description based on the dish name. This field must NEVER be empty.
 - size: serving size if explicitly specified (e.g. "20cl", "2cl"), otherwise empty
 - category: section header from the menu (e.g. "Suppen", "Pasta"). Preserve slash-separated bilingual headers like "Zuppe / Suppen".
-- category_english: clean English translation of the category. PROVIDE THIS ONLY IF the category does not already contain English. If the category is already English or includes an English version (e.g. "Zuppe / Soups"), set this to "". For multilingual non-English categories (e.g. "Vorspeisen & Salate // Закуски & салаты"), give ONE single English translation (e.g. "Appetizers & Salads").
+- category_english: clean __LANG__ translation of the category. PROVIDE THIS ONLY IF the category does not already contain __LANG__. If the category is already __LANG__ or includes a __LANG__ version (e.g. "Zuppe / Soups"), set this to "". For multilingual categories (e.g. "Vorspeisen & Salate // Закуски & салаты"), give ONE single __LANG__ translation (e.g. "Appetizers & Salads").
 - visual_appearance: a SHORT description of how this dish physically LOOKS, written for someone who will draw or photograph it. Describe SHAPE, COLORS, and PLATING STYLE — not the ingredient list. For LAYERED dishes (terrines, layered salads, tiramisu, lasagna, cakes), explicitly mention "side view" or "cross-section showing layers" so the layers are visible. For most other dishes no angle is needed. For well-known dishes, describe their canonical look. Examples:
     - "Сельдь под шубой" -> "layered salad shaped like a cake, cross-section side view showing distinct colorful layers, bright pink-purple beetroot on top, white mayonnaise and fish layers below"
     - "Tiramisu" -> "side view showing layered dessert, alternating cream and coffee-soaked sponge layers, dusted with cocoa on top"
@@ -78,18 +83,27 @@ Critical rules:
 - Do not include menu numbering codes (e.g. "675.") as part of the dish name
 - Interpret superscript or raised cents as decimal - never output prices like "1400" as whole numbers
 - If you cannot read part of the menu clearly, still include what you can see
-- ENGLISH FIELDS: name_english and category_english — only fill when the original lacks English (empty "" if original is already English). BUT description_english is SPECIAL: ALWAYS fill it with an English description, never leave it empty. When the original has multiple non-English languages, output a SINGLE English translation — never duplicate it once per language.
+- TRANSLATED FIELDS: name_english and category_english — only fill when the original lacks __LANG__ (empty "" if original is already __LANG__). BUT description_english is SPECIAL: ALWAYS fill it with a __LANG__ description, never leave it empty. When the original has multiple languages, output a SINGLE __LANG__ translation — never duplicate it once per language.
 - dietary_tags: use ONLY values from the allowed list above. Never invent new tag names.
 """
 
+
+def _build_extraction_prompt(language_name: str) -> str:
+    """Fill the extraction prompt template with the target translation language."""
+    return _EXTRACTION_PROMPT_TEMPLATE.replace("__LANG__", language_name)
+
+
 async def extract_menu_from_image(
     image_bytes: bytes,
+    language_name: str = "English",
     client: GeminiClient | None = None,
 ) -> MenuCreate:
     """Extract a structured menu from preprocessed image bytes.
 
     Args:
         image_bytes: JPEG bytes (already preprocessed).
+        language_name: English name of the target translation language (e.g.
+            "Spanish"). The `*_english` fields carry this language's text.
         client: optional injected GeminiClient (for testing).
 
     Returns:
@@ -101,10 +115,10 @@ async def extract_menu_from_image(
     """
     client = client or GeminiClient()
 
-    logger.info("extraction_started", image_size=len(image_bytes))
+    logger.info("extraction_started", image_size=len(image_bytes), language=language_name)
 
     result = await client.generate_with_image(
-        prompt=EXTRACTION_PROMPT,
+        prompt=_build_extraction_prompt(language_name),
         image_bytes=image_bytes,
     )
 
@@ -157,8 +171,8 @@ short engaging description and a nutrition estimate. Work from the dish names/kn
 
 For EACH dish below (identified by its index), produce:
 - about: a single engaging paragraph (2-4 sentences) for a curious traveler — what it is,
-  key ingredients, flavor, and a cultural or origin note if it fits. Flowing English prose,
-  NOT a list. Empty string "" if the dish is unrecognisable.
+  key ingredients, flavor, and a cultural or origin note if it fits. Write it in {language},
+  as flowing prose, NOT a list. Empty string "" if the dish is unrecognisable.
 - nutrition: estimated values per typical serving, from standard culinary knowledge (an
   approximation, not medical fact): {{"calories": int, "protein_g": float, "carbs_g": float,
   "fat_g": float}}. Use null only if you truly cannot estimate.
@@ -173,10 +187,12 @@ Return ONLY valid JSON, exactly one item per dish index:
 async def enrich_dishes(
     dishes: list[Dish],
     cuisine_type: str | None,
+    language_name: str = "English",
     client: GeminiClient | None = None,
 ) -> dict[int, dict]:
     """Second-pass enrichment: about + nutrition per dish, keyed by dish index.
 
+    `about` is written in `language_name` (the target translation language).
     Text-only Gemini call (no image). Best-effort — the caller treats failure as
     non-fatal, leaving about/nutrition empty.
     """
@@ -197,7 +213,9 @@ async def enrich_dishes(
         lines.append(line)
 
     prompt = ENRICHMENT_PROMPT.format(
-        cuisine=cuisine_type or "restaurant", dish_list="\n".join(lines)
+        cuisine=cuisine_type or "restaurant",
+        dish_list="\n".join(lines),
+        language=language_name,
     )
     result = await client.generate_text(prompt)
     parsed = parse_json_response(result["text"])

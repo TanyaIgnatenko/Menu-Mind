@@ -3,9 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Persisted app preferences (shared_preferences), same plain-service pattern as
 /// [HistoryService].
 ///
-/// - `translationLanguage`: the language menus should be translated to. NOTE:
-///   the backend currently always translates to English — this choice is stored
-///   and shown in the UI, but does not yet change the translation output.
+/// - `translationLanguage`: the language menus are translated to. Sent with each
+///   scan (see ApiService.uploadMenu); the backend translates the menu into it.
 /// - `replyToEmail`: the address feedback replies go to; pre-fills the Send
 ///   Feedback form next time.
 const _kLang = 'menumind:translationLanguage';

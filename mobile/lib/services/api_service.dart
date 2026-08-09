@@ -19,12 +19,18 @@ class ApiService {
     return '$_imageBase$relativePath';
   }
 
-  Future<Menu> uploadMenu(File imageFile, {String? deviceId}) async {
+  Future<Menu> uploadMenu(
+    File imageFile, {
+    String? deviceId,
+    String? language,
+  }) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
         imageFile.path,
         filename: 'menu.jpg',
       ),
+      // Target translation language (ISO code). Backend defaults to English.
+      'language': ?language,
     });
 
     Response response;
