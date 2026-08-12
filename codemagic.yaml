@@ -69,7 +69,7 @@ workflows:
       - name: Build signed IPA
         script: |
           flutter build ipa --release \
-            --build-name=1.1.0 \
+            --build-name=1.1.1 \
             --build-number=$PROJECT_BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
 
