@@ -24,8 +24,9 @@ const _filters = [
   // Restrictions (needs)
   FilterDef(id: 'vegetarian', label: 'Vegetarian', emoji: '🥗', tags: ['vegetarian'], group: 'needs', mode: 'require'),
   FilterDef(id: 'vegan', label: 'Vegan', emoji: '🌱', tags: ['vegan'], group: 'needs', mode: 'require'),
-  FilterDef(id: 'no_gluten', label: 'GF', emoji: '🌾', tags: ['contains_gluten'], group: 'needs', mode: 'exclude'),
   FilterDef(id: 'no_pork', label: 'No pork', emoji: '🚫', tags: ['contains_pork'], group: 'needs', mode: 'exclude'),
+  FilterDef(id: 'no_beef', label: 'No beef', emoji: '🚫', tags: ['contains_beef'], group: 'needs', mode: 'exclude'),
+  FilterDef(id: 'no_gluten', label: 'GF', emoji: '🌾', tags: ['contains_gluten'], group: 'needs', mode: 'exclude'),
   FilterDef(id: 'no_nuts', label: 'No nuts', emoji: '🥜', tags: ['contains_nuts'], group: 'needs', mode: 'exclude'),
   FilterDef(id: 'no_dairy', label: 'No dairy', emoji: '🥛', tags: ['contains_dairy'], group: 'needs', mode: 'exclude'),
   FilterDef(id: 'no_eggs', label: 'No eggs', emoji: '🥚', tags: ['contains_eggs'], group: 'needs', mode: 'exclude'),
