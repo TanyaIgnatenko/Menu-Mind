@@ -1,22 +1,22 @@
 # MenuMind
 
-> AI-powered menu visualization & translation — photograph any restaurant menu and instantly see a photorealistic image of every dish plus an English translation.
+> AI-powered menu visualization & translation — photograph any restaurant menu and instantly see a photorealistic image of every dish plus a translation in your language.
 
 **Get the app:** [Google Play](https://play.google.com/store/apps/details?id=com.menumind.mobile&pcampaignid=web_share) · [App Store](https://apps.apple.com/de/app/menumind-menu-translator/id6795102776?l=en-GB)
 
 **Live demo:** https://menu-mind-tawny.vercel.app
 
-Traveling abroad, you open a menu and recognize nothing. MenuMind lets you photograph any restaurant menu and instantly see every dish — translated into English and rendered as a photorealistic AI image — so you actually know what you're about to order.
+Traveling abroad, you open a menu and recognize nothing. MenuMind lets you photograph any restaurant menu and instantly see every dish — translated into your language and rendered as a photorealistic AI image — so you actually know what you're about to order.
 
 ## Demo
 
-<video src="https://github.com/user-attachments/assets/833489d1-0451-4922-90c7-e12600e713b0" controls width="720"></video>
+<video src="https://github.com/user-attachments/assets/37c99fea-ebef-4c71-9e83-88a688138db7" controls width="405"></video>
 
-▶️ [Watch the demo](https://github.com/user-attachments/assets/833489d1-0451-4922-90c7-e12600e713b0) — photograph a menu and watch every dish get translated and rendered as an AI image.
+▶️ [Watch the demo](https://github.com/user-attachments/assets/37c99fea-ebef-4c71-9e83-88a688138db7) — photograph a menu and watch every dish get translated and rendered as an AI image.
 
 ## Features
 
-- 📸 **Snap & translate** — photograph any menu; every dish is extracted and translated (original name + English), with the original-language text preserved.
+- 📸 **Snap & translate** — photograph any menu; every dish is extracted and translated (original name + your language), with the original-language text preserved.
 - 🌍 **40+ languages** — handles even mixed-language menus (e.g. German + Italian on one page) without duplicate translations.
 - 🎨 **AI dish photos** — a photorealistic image is generated for every dish (Flux diffusion model), so you can see an unfamiliar dish before ordering.
 - ⚡ **Progressive loading** — translated text appears instantly while the AI images stream in (shimmer → fade-in); re-scanning a menu is served from cache immediately.
